@@ -72,7 +72,7 @@ export default function Home() {
           <main className="w-full">
             <section className="mb-12">
               <h2
-                className={`text-2xl font-semibold mb-6 border-b-2 border-gray-300 pb-1 ${poppins.className}`}
+                className={`text-2xl font-semibold mb-4 pl-2 ${poppins.className}`}
               >
                 Home
               </h2>
