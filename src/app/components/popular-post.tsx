@@ -42,19 +42,46 @@ const PopularPosts: React.FC<BlogListProps> = ({
     return (
       <div className="space-y-4">
         {posts.map((post) => (
-          <div key={post._id} className="group">
-            <h3
-              className={`text-sm font-medium text-neutral-800 group-hover:text-primary-600 transition-colors ${poppins.className}`}
-            >
-              {post.title}
-            </h3>
-            <p className={`text-xs text-neutral-500 mt-1 ${lora.className}`}>
-              {post.author} ·{" "}
-              {new Date(post.createdAt || "").toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </p>
+          <div
+            key={post._id}
+            className="group flex items-start gap-3 hover:bg-gray-50/80 p-2 rounded-lg transition-all duration-200"
+          >
+            {/* Thumbnail Image */}
+            {post.banner && (
+              <div className="relative w-16 h-12 rounded-md overflow-hidden flex-shrink-0 bg-gray-100">
+                <Image
+                  src={post.banner}
+                  alt={post.title}
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105 duration-300"
+                  sizes="64px"
+                />
+              </div>
+            )}
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <h3
+                className={`text-sm font-medium text-neutral-800 group-hover:text-indigo-600 transition-colors leading-tight mb-1 line-clamp-2 ${poppins.className}`}
+              >
+                {post.title}
+              </h3>
+              <div className="flex items-center gap-2">
+                <p className={`text-xs text-neutral-500 ${lora.className}`}>
+                  {post.author && (
+                    <>
+                      {post.author}
+                      {post.createdAt && " · "}
+                    </>
+                  )}
+                  {post.createdAt &&
+                    new Date(post.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })}
+                </p>
+              </div>
+            </div>
           </div>
         ))}
       </div>
@@ -145,7 +172,7 @@ const PopularPosts: React.FC<BlogListProps> = ({
         return (
           <article
             key={post._id}
-            className="flex flex-col sm:flex-row gap-4 pb-6 border-b border-neutral-100 hover:bg-neutral-50/50 p-2 rounded-lg transition-colors"
+            className="flex flex-col sm:flex-row gap-4 border-b border-neutral-100 hover:bg-neutral-50/50 p-2 rounded-lg transition-colors"
           >
             <div className="flex-1">
               <div className="flex items-center gap-2 text-xs text-neutral-500 mb-2">

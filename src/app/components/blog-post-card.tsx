@@ -57,7 +57,6 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
   const formattedDate = new Date(post.createdAt).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
-    year: "numeric",
   });
 
   const getReadTime = (content?: string) => {

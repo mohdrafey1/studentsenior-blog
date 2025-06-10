@@ -7,6 +7,9 @@ import "@/app/globals.css";
 import { Lora, Poppins } from "next/font/google";
 import { TrendingUp } from "lucide-react";
 import PopularPosts from "../components/popular-post";
+import AdSenseAd from "../components/Ads/AdSenseAd";
+import Footer from "../components/Footer";
+import { useRouter } from "next/navigation";
 
 const lora = Lora({ subsets: ["latin"], weight: "400", preload: true });
 const poppins = Poppins({ subsets: ["latin"], weight: "600", preload: true });
@@ -14,6 +17,7 @@ const poppins = Poppins({ subsets: ["latin"], weight: "600", preload: true });
 export default function Home() {
   const [posts, setPosts] = useState<any[]>([]);
   const [popularPost, setPopularPost] = useState<any[]>([]);
+  const router = useRouter();
 
   const category = [
     "nodejs",
@@ -23,7 +27,7 @@ export default function Home() {
     "NextJs",
     "React",
     "Earning",
-    "carrier",
+    "Career",
     "web devlopment",
   ];
 
@@ -62,6 +66,9 @@ export default function Home() {
       alert("Link copied to clipboard!");
     }
   };
+  const handlePostClick = (slug: string) => {
+    router.push(`/blog/post/${slug}`);
+  };
 
   return (
     <>
@@ -82,9 +89,11 @@ export default function Home() {
                     key={post._id}
                     post={post}
                     onShare={() => handleShare(post)}
+                    onClick={() => handlePostClick(post.slug)}
                   />
                 ))}
               </div>
+              {/* <AdSenseAd /> */}
             </section>
           </main>
 
@@ -95,7 +104,7 @@ export default function Home() {
               <h3 className={`${poppins.className} text-xl font-semibold mb-4`}>
                 Stories from all interests
               </h3>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
                 {category.map((item, index) => (
                   <span
                     key={index}
@@ -116,10 +125,12 @@ export default function Home() {
                 </h3>
               </div>
               <PopularPosts posts={popularPost} />
+              <AdSenseAd />
             </section>
           </aside>
         </div>
       </div>
+      <Footer />
     </>
   );
 }

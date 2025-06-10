@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import logo from "../../../public/logo.png";
+import logo from "../../../public/image192.png";
 import { Search } from "lucide-react";
 import { Poppins, Inter } from "next/font/google";
 
@@ -20,21 +20,21 @@ const inter = Inter({
 
 const Header: React.FC = () => {
   return (
-    <header className="bg-gray-50 border-b border-gray-200 w-full px-4 sm:px-8 md:px-16 py-4">
+    <header className="bg-gray-50 border-b border-gray-200 w-full px-4 sm:px-8 md:px-16 py-2">
       <div className="flex flex-col sm:flex-row sm:justify-between items-center gap-4">
         {/* Logo */}
-        <div className="flex items-center gap-3 ">
+        <div className="flex items-center  ">
           <Image
             src={logo}
             alt="Student Senior Blog"
             className="rounded-full"
-            height={40}
+            height={60}
             priority
           />
           <span
-            className={`${poppins.className} text-xl text-gray-900 font-semibold`}
+            className={`${poppins.className} text-2xl text-gray-900 font-semibold`}
           >
-            SS Blogs
+            Blogs
           </span>
         </div>
 

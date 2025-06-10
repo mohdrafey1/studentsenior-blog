@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Poppins, Lora } from "next/font/google";
+import Script from "next/script"; // ✅ Import Script component
 import "./globals.css";
 
 const poppins = Poppins({
@@ -15,8 +16,11 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Your App Title",
+  title: "Student Senior Blogs",
   description: "Your App Description",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
@@ -26,6 +30,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        {/* ✅ Google AdSense Script (Test Client ID) */}
+        <Script
+          id="adsense-script"
+          async
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0000000000000000"
+          crossOrigin="anonymous"
+        />
+      </head>
       <body className={`${poppins.variable} ${lora.variable} antialiased`}>
         {children}
       </body>
