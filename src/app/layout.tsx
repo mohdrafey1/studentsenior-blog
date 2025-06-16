@@ -17,7 +17,8 @@ const lora = Lora({
 
 export const metadata: Metadata = {
   title: "Student Senior Blogs",
-  description: "Your App Description",
+  description:
+    "Explore tech insights, study tips, and college resources crafted by Student Senior.",
   icons: {
     icon: "/favicon.png",
   },

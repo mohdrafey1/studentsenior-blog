@@ -1,103 +1,139 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import BlogPostCard from "@/app/components/blog-post-card";
+import Header from "@/app/components/header";
+import "@/app/globals.css";
+import { Lora, Poppins } from "next/font/google";
+import { TrendingUp } from "lucide-react";
+import PopularPosts from "./components/popular-post";
+import AdSenseAd from "./components/Ads/AdSenseAd";
+import Footer from "./components/Footer";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+const lora = Lora({ subsets: ["latin"], weight: "400", preload: true });
+const poppins = Poppins({ subsets: ["latin"], weight: "600", preload: true });
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/image192.png"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [posts, setPosts] = useState<any[]>([]);
+  const [popularPost, setPopularPost] = useState<any[]>([]);
+  const router = useRouter();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/image192.png"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const category = [
+    "nodejs",
+    "backend",
+    "express",
+    "technology",
+    "NextJs",
+    "React",
+    "Earning",
+    "Career",
+    "web devlopment",
+  ];
+
+  const BASE_API = process.env.NEXT_PUBLIC_API_URL;
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await fetch(`${BASE_API}/blogs`);
+        const data = await res.json();
+        setPosts(data.data);
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+      }
+    };
+    const fetchPopular = async () => {
+      try {
+        const res = await fetch(`${BASE_API}/blogsPopular`);
+        const data = await res.json();
+        setPopularPost(data.data);
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+      }
+    };
+    fetchPopular();
+    fetchPosts();
+  }, []);
+
+  const handleShare = (post: any) => {
+    if (navigator.share) {
+      navigator.share({
+        title: post.title,
+        text: post.description,
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      alert("Link copied to clipboard!");
+    }
+  };
+  const handlePostClick = (slug: string) => {
+    router.push(`/blog/post/${slug}`);
+  };
+
+  return (
+    <>
+      <Header />
+      <div className="min-h-screen bg-gray-50 py-8 px-4 flex justify-center">
+        <div className="max-w-7xl w-full grid grid-cols-1 md:grid-cols-[7fr_3fr] gap-10">
+          {/* Main Content */}
+          <main className="w-full">
+            <section className="mb-12">
+              <h2
+                className={`text-2xl font-semibold mb-4 pl-2 ${poppins.className}`}
+              >
+                Home
+              </h2>
+              <div className="space-y-6">
+                {posts.map((post) => (
+                  <BlogPostCard
+                    key={post._id}
+                    post={post}
+                    onShare={() => handleShare(post)}
+                    onClick={() => handlePostClick(post.slug)}
+                  />
+                ))}
+              </div>
+              {/* <AdSenseAd /> */}
+            </section>
+          </main>
+
+          {/* Sidebar */}
+          <aside className="w-full space-y-8">
+            {/* Categories */}
+            <section>
+              <h3 className={`${poppins.className} text-xl font-semibold mb-4`}>
+                Stories from all interests
+              </h3>
+              <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
+                {category.map((item, index) => (
+                  <Link
+                    key={index}
+                    href={`/blog/search?q=${encodeURIComponent(item)}`}
+                    className={`${poppins.className} bg-stone-100 text-gray-800 shadow-md px-4 py-2 rounded-full cursor-pointer capitalize hover:bg-stone-200 transition`}
+                  >
+                    {item}
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            {/* Popular Posts */}
+            <section>
+              <div className="flex items-center gap-2 mb-4">
+                <TrendingUp className="text-gray-700" />
+                <h3 className={`${poppins.className} text-xl font-semibold`}>
+                  Popular
+                </h3>
+              </div>
+              <PopularPosts posts={popularPost} />
+              <AdSenseAd />
+            </section>
+          </aside>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/image192.png"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/image192.png"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/image192.png"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+      <Footer />
+    </>
   );
 }

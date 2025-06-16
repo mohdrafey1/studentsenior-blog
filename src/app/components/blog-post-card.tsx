@@ -68,7 +68,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
 
   return (
     <article
-      className="group bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col sm:flex-row h-full"
+      className="group bg-white cursor-pointer border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md flex flex-col sm:flex-row h-full"
       onClick={onClick}
       onKeyDown={(e) => handleKeyDown(e, onClick)}
       tabIndex={onClick ? 0 : undefined}
@@ -129,28 +129,9 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
               <Clock className="w-4 h-4" />
               <span>{getReadTime(post.content)}</span>
             </div>
-            <span>•</span>
-            <div className="flex items-center gap-1">
-              <Eye className="w-4 h-4" />
-              <span>{post.total_reads ?? 0}</span>
-            </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onLike?.();
-              }}
-              className={`flex items-center gap-1 text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 rounded-lg px-2 py-1 ${
-                isLiked ? "text-red-600" : "text-gray-500 hover:text-red-600"
-              }`}
-              aria-label={isLiked ? "Unlike this post" : "Like this post"}
-            >
-              <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
-              <span>{post.total_likes ?? 0}</span>
-            </button>
-
             <button
               onClick={(e) => {
                 e.stopPropagation();
