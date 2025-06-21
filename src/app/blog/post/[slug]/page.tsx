@@ -9,452 +9,433 @@ import { atomDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import PopularPosts from "@/app/components/popular-post";
 import Header from "@/app/components/header";
 import Footer from "@/app/components/Footer";
-import { Poppins } from "next/font/google";
-import type { Metadata } from "next";
-
+import React from "react";
 import SocialShareButtons from "@/app/components/share-buttons";
-
-export interface Blog {
-  _id: string;
-  title: string;
-  content?: string;
-  description?: string;
-  banner?: string;
-  category?: string;
-  author?: string;
-  date?: string;
-  likes?: number;
-  total_reads: string;
-  createdAt?: string;
-  updatedAt?: string;
-  slug: string;
-  isDraft?: boolean;
-  tags?: string[];
-  total_likes?: number;
-}
-
-interface BlogPostComponentProps {
-  post: Blog;
-  popularPosts: Blog[];
-  latestPosts: Blog[];
-}
-
-interface BlogPostPageProps {
-  params: { slug: string };
-}
+import { api } from "@/config/apiConfig";
+import {
+    BlogPostComponentProps,
+    tParams,
+    Blog,
+    CodeProps,
+} from "@/constant/interface";
+import { Poppins } from "next/font/google";
+import { formatReadTime, formatDate } from "@/utils/formatting";
 
 const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "600"],
-  preload: true,
+    subsets: ["latin"],
+    weight: ["400", "600"],
+    preload: true,
 });
 
-function formatDate(dateString?: string): string {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-}
+function renderMarkdown(content: string = ""): React.ReactElement {
+    if (!content.trim()) {
+        return (
+            <div className="max-w-none">
+                <p className="text-neutral-500 italic font-light">
+                    No content available.
+                </p>
+            </div>
+        );
+    }
 
-function formatReadTime(content: string = ""): string {
-  const wordsPerMinute = 200;
-  const wordCount = content.trim().split(/\s+/).length;
-  const readTime = Math.ceil(wordCount / wordsPerMinute);
-  return `${readTime} min read`;
-}
-
-function renderMarkdown(content: string = ""): JSX.Element {
-  if (!content.trim()) {
     return (
-      <div className="max-w-none">
-        <p className="text-neutral-500 italic font-light">
-          No content available.
-        </p>
-      </div>
+        <div className="max-w-none text-neutral-800">
+            <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                    h1: ({ ...props }) => (
+                        <h1
+                            className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-8 md:mt-12 mb-6 md:mb-8 leading-tight"
+                            {...props}
+                        />
+                    ),
+                    h2: ({ ...props }) => (
+                        <h2
+                            className="text-2xl md:text-3xl font-bold text-neutral-900 mt-8 md:mt-10 mb-4 md:mb-6 leading-tight relative after:content-[''] after:absolute after:bottom-[-8px] after:left-0 after:w-16 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500"
+                            {...props}
+                        />
+                    ),
+                    h3: ({ ...props }) => (
+                        <h3
+                            className="text-xl md:text-2xl font-semibold text-neutral-800 mt-6 md:mt-8 mb-3 md:mb-4 leading-tight flex items-center before:content-['#'] before:text-blue-500 before:mr-2 before:text-lg md:before:text-xl"
+                            {...props}
+                        />
+                    ),
+                    p: ({ ...props }) => (
+                        <p
+                            className="text-base md:text-lg text-neutral-700 leading-relaxed mb-4 md:mb-6 font-normal"
+                            {...props}
+                        />
+                    ),
+                    a: ({ ...props }) => (
+                        <a
+                            className="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-4 decoration-blue-300 hover:decoration-blue-500 transition-all duration-200"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            {...props}
+                        />
+                    ),
+                    ul: ({ ...props }) => (
+                        <ul
+                            className="list-disc pl-5 md:pl-6 mb-4 md:mb-6 space-y-2 md:space-y-3 marker:text-blue-400"
+                            {...props}
+                        />
+                    ),
+                    ol: ({ ...props }) => (
+                        <ol
+                            className="list-decimal pl-5 md:pl-6 mb-4 md:mb-6 space-y-2 md:space-y-3 marker:font-medium marker:text-blue-500"
+                            {...props}
+                        />
+                    ),
+                    li: ({ ...props }) => (
+                        <li
+                            className="text-base md:text-lg text-neutral-700 leading-relaxed pl-1 md:pl-2 marker:font-medium"
+                            {...props}
+                        />
+                    ),
+                    blockquote: ({ ...props }) => (
+                        <blockquote
+                            className="border-l-4 border-blue-400 pl-4 md:pl-6 italic text-neutral-600 my-4 md:my-6 py-1 md:py-2 bg-blue-50 rounded-r-lg"
+                            {...props}
+                        />
+                    ),
+                    code({ inline, className, children, ...props }: CodeProps) {
+                        const match = /language-(\w+)/.exec(className || "");
+
+                        if (inline) {
+                            return (
+                                <code
+                                    className="inline bg-neutral-100 text-neutral-800 px-1.5 py-0.5 rounded font-mono text-sm border border-neutral-300"
+                                    {...props}
+                                >
+                                    {String(children).trim()}
+                                </code>
+                            );
+                        }
+
+                        return (
+                            <div className="rounded-lg overflow-hidden my-4 md:my-6 group">
+                                <div className="flex items-center justify-between bg-neutral-800 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-200">
+                                    <span>{match?.[1] || "code"}</span>
+                                    <button className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-400 hover:text-white">
+                                        <Copy className="w-3 h-3 md:w-4 md:h-4" />
+                                    </button>
+                                </div>
+                                <SyntaxHighlighter
+                                    // @ts-expect-error - atomDark type is not properly exported
+                                    style={atomDark}
+                                    language={match?.[1] || "text"}
+                                    PreTag="div"
+                                    className="!bg-neutral-900 !rounded-b-lg !p-3 md:!p-4 text-xs md:text-sm !m-0"
+                                    showLineNumbers
+                                    {...props}
+                                >
+                                    {String(children).replace(/\n$/, "")}
+                                </SyntaxHighlighter>
+                            </div>
+                        );
+                    },
+                    hr: ({ ...props }) => (
+                        <hr
+                            className="my-6 md:my-8 h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent border-0"
+                            {...props}
+                        />
+                    ),
+                    img: ({ src, alt }) => {
+                        if (!src || typeof src !== "string") return null;
+
+                        return (
+                            <div className="my-6 md:my-8 rounded-xl overflow-hidden shadow-lg border border-neutral-200 group">
+                                <Image
+                                    src={src}
+                                    alt={alt || ""}
+                                    width={800}
+                                    height={400}
+                                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+                                />
+                                {alt && (
+                                    <div className="bg-neutral-50 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-600 text-center border-t border-neutral-200">
+                                        {alt}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    },
+                    table: ({ ...props }) => (
+                        <div className="overflow-x-auto my-4 md:my-6 rounded-lg border border-neutral-200 shadow-sm">
+                            <table
+                                className="min-w-full divide-y divide-neutral-200"
+                                {...props}
+                            />
+                        </div>
+                    ),
+                    th: ({ ...props }) => (
+                        <th
+                            className="px-3 md:px-4 py-2 md:py-3 bg-neutral-50 text-left text-xs md:text-sm font-semibold text-neutral-700 uppercase tracking-wider border-b border-neutral-200"
+                            {...props}
+                        />
+                    ),
+                    td: ({ ...props }) => (
+                        <td
+                            className="px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm text-neutral-700 border-b border-neutral-200"
+                            {...props}
+                        />
+                    ),
+                    tr: ({ ...props }) => (
+                        <tr
+                            className="hover:bg-neutral-50 transition-colors"
+                            {...props}
+                        />
+                    ),
+                    strong: ({ ...props }) => (
+                        <strong
+                            className="font-semibold text-neutral-900"
+                            {...props}
+                        />
+                    ),
+                    em: ({ ...props }) => (
+                        <em className="italic text-blue-600" {...props} />
+                    ),
+                }}
+            >
+                {content}
+            </ReactMarkdown>
+        </div>
     );
-  }
-
-  return (
-    <div className="max-w-none text-neutral-800">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        components={{
-          h1: ({ node, ...props }) => (
-            <h1
-              className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-8 md:mt-12 mb-6 md:mb-8 leading-tight"
-              {...props}
-            />
-          ),
-          h2: ({ node, ...props }) => (
-            <h2
-              className="text-2xl md:text-3xl font-bold text-neutral-900 mt-8 md:mt-10 mb-4 md:mb-6 leading-tight relative after:content-[''] after:absolute after:bottom-[-8px] after:left-0 after:w-16 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500"
-              {...props}
-            />
-          ),
-          h3: ({ node, ...props }) => (
-            <h3
-              className="text-xl md:text-2xl font-semibold text-neutral-800 mt-6 md:mt-8 mb-3 md:mb-4 leading-tight flex items-center before:content-['#'] before:text-blue-500 before:mr-2 before:text-lg md:before:text-xl"
-              {...props}
-            />
-          ),
-          p: ({ node, ...props }) => (
-            <p
-              className="text-base md:text-lg text-neutral-700 leading-relaxed mb-4 md:mb-6 font-normal"
-              {...props}
-            />
-          ),
-          a: ({ node, ...props }) => (
-            <a
-              className="text-blue-600 hover:text-blue-800 font-medium underline underline-offset-4 decoration-blue-300 hover:decoration-blue-500 transition-all duration-200"
-              target="_blank"
-              rel="noopener noreferrer"
-              {...props}
-            />
-          ),
-          ul: ({ node, ...props }) => (
-            <ul
-              className="list-disc pl-5 md:pl-6 mb-4 md:mb-6 space-y-2 md:space-y-3 marker:text-blue-400"
-              {...props}
-            />
-          ),
-          ol: ({ node, ...props }) => (
-            <ol
-              className="list-decimal pl-5 md:pl-6 mb-4 md:mb-6 space-y-2 md:space-y-3 marker:font-medium marker:text-blue-500"
-              {...props}
-            />
-          ),
-          li: ({ node, ...props }) => (
-            <li
-              className="text-base md:text-lg text-neutral-700 leading-relaxed pl-1 md:pl-2 marker:font-medium"
-              {...props}
-            />
-          ),
-          blockquote: ({ node, ...props }) => (
-            <blockquote
-              className="border-l-4 border-blue-400 pl-4 md:pl-6 italic text-neutral-600 my-4 md:my-6 py-1 md:py-2 bg-blue-50 rounded-r-lg"
-              {...props}
-            />
-          ),
-          code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || "");
-
-            if (inline) {
-              return (
-                <code
-                  className="inline bg-neutral-100 text-neutral-800 px-1.5 py-0.5 rounded font-mono text-sm border border-neutral-300"
-                  {...props}
-                >
-                  {String(children).trim()}
-                </code>
-              );
-            }
-
-            return (
-              <div className="rounded-lg overflow-hidden my-4 md:my-6 group">
-                <div className="flex items-center justify-between bg-neutral-800 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-200">
-                  <span>{match?.[1] || "code"}</span>
-                  <button className="opacity-0 group-hover:opacity-100 transition-opacity text-neutral-400 hover:text-white">
-                    <Copy className="w-3 h-3 md:w-4 md:h-4" />
-                  </button>
-                </div>
-                <SyntaxHighlighter
-                  style={atomDark}
-                  language={match?.[1] || "text"}
-                  PreTag="div"
-                  className="!bg-neutral-900 !rounded-b-lg !p-3 md:!p-4 text-xs md:text-sm !m-0"
-                  showLineNumbers
-                  {...props}
-                >
-                  {String(children).replace(/\n$/, "")}
-                </SyntaxHighlighter>
-              </div>
-            );
-          },
-          hr: ({ node, ...props }) => (
-            <hr
-              className="my-6 md:my-8 h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent border-0"
-              {...props}
-            />
-          ),
-          img: ({ node, ...props }) => (
-            <div className="my-6 md:my-8 rounded-xl overflow-hidden shadow-lg border border-neutral-200 group">
-              <img
-                className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]"
-                {...props}
-                alt={props.alt || ""}
-              />
-              {props.alt && (
-                <div className="bg-neutral-50 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-600 text-center border-t border-neutral-200">
-                  {props.alt}
-                </div>
-              )}
-            </div>
-          ),
-          table: ({ node, ...props }) => (
-            <div className="overflow-x-auto my-4 md:my-6 rounded-lg border border-neutral-200 shadow-sm">
-              <table
-                className="min-w-full divide-y divide-neutral-200"
-                {...props}
-              />
-            </div>
-          ),
-          th: ({ node, ...props }) => (
-            <th
-              className="px-3 md:px-4 py-2 md:py-3 bg-neutral-50 text-left text-xs md:text-sm font-semibold text-neutral-700 uppercase tracking-wider border-b border-neutral-200"
-              {...props}
-            />
-          ),
-          td: ({ node, ...props }) => (
-            <td
-              className="px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm text-neutral-700 border-b border-neutral-200"
-              {...props}
-            />
-          ),
-          tr: ({ node, ...props }) => (
-            <tr className="hover:bg-neutral-50 transition-colors" {...props} />
-          ),
-          strong: ({ node, ...props }) => (
-            <strong className="font-semibold text-neutral-900" {...props} />
-          ),
-          em: ({ node, ...props }) => (
-            <em className="italic text-blue-600" {...props} />
-          ),
-        }}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
-  );
 }
 
 function BlogPostComponent({
-  post,
-  popularPosts,
-  latestPosts,
-}: BlogPostComponentProps): JSX.Element {
-  const readTime = formatReadTime(post.content);
+    post,
+    popularPosts,
+    latestPosts,
+}: BlogPostComponentProps): React.ReactElement {
+    const readTime = formatReadTime(post.content);
 
-  return (
-    <>
-      <Header />
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-100">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-12 p-4 sm:p-6 lg:p-8">
-          <article className="flex-1 rounded-2xl overflow-hidden">
-            <div className="px-4 sm:px-6 md:px-10 pt-2 pb-4">
-              <Link
-                href="/"
-                className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-all duration-300 hover:gap-3 group"
-              >
-                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-                <span className="font-medium">Back to Home</span>
-              </Link>
+    return (
+        <>
+            <Header />
+            <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-100">
+                <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6 md:gap-8 lg:gap-12 p-4 sm:p-6 lg:p-8">
+                    <article className="flex-1 rounded-2xl overflow-hidden">
+                        <div className="px-4 sm:px-6 md:px-10 pt-2 pb-4">
+                            <Link
+                                href="/"
+                                className="inline-flex items-center gap-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 transition-all duration-300 hover:gap-3 group"
+                            >
+                                <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+                                <span className="font-medium">
+                                    Back to Home
+                                </span>
+                            </Link>
+                        </div>
+
+                        <header className="px-4 sm:px-6 md:px-8 lg:px-10 pb-0 text-neutral-800">
+                            {/* Title */}
+                            <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold leading-tight tracking-tight font-serif mb-3 text-neutral-900">
+                                {post.title}
+                            </h1>
+
+                            {/* Meta + Share */}
+                            <div className="flex flex-col sm:flex-row sm:items-start md:items-center md:justify-between gap-3 md:gap-6 mb-4">
+                                {/* Meta Info */}
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-neutral-500">
+                                    {post.author && (
+                                        <div className="flex items-center gap-1">
+                                            <User className="w-3 h-3 sm:w-4 sm:h-4 text-neutral-400" />
+                                            <span className="font-medium text-neutral-700">
+                                                {post.author}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center gap-1">
+                                        <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-neutral-400" />
+                                        <span className="font-medium">
+                                            {formatDate(post.createdAt)}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-neutral-400" />
+                                        <span className="font-medium">
+                                            {readTime}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Share Buttons */}
+                                <div className="flex justify-start sm:justify-end">
+                                    <SocialShareButtons />
+                                </div>
+                            </div>
+
+                            {/* Tags */}
+                            {Array.isArray(post.tags) &&
+                                post.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
+                                        {post.tags.map(
+                                            (tag: string, index: number) => (
+                                                <span
+                                                    key={`${tag}-${index}`}
+                                                    className="px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer bg-neutral-100 text-neutral-700 border border-neutral-200 hover:bg-neutral-200 transition-all duration-200"
+                                                >
+                                                    #{tag}
+                                                </span>
+                                            )
+                                        )}
+                                    </div>
+                                )}
+
+                            {/* Banner Image */}
+                            {post.banner && (
+                                <div className="relative w-full h-48 sm:h-52 md:h-64 lg:h-72 xl:h-80 mb-6 sm:mb-8 rounded-xl overflow-hidden shadow-lg">
+                                    <Image
+                                        src={post.banner}
+                                        alt={`Banner for ${post.title}`}
+                                        fill
+                                        className="object-cover hover:scale-105 transition-transform duration-700"
+                                        sizes="(max-width: 768px) 100vw, 800px"
+                                        priority
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                                </div>
+                            )}
+                        </header>
+
+                        <div className="px-4 sm:px-6 md:px-10 pb-8 sm:pb-12">
+                            {renderMarkdown(post.content)}
+                        </div>
+
+                        <footer className="px-4 sm:px-6 md:px-10 py-6 sm:py-8 border-t border-neutral-200">
+                            {/* Optional footer content can go here */}
+                        </footer>
+                    </article>
+
+                    <aside className="lg:w-80">
+                        <div className="sticky top-4 sm:top-8 space-y-8 sm:space-y-10">
+                            <h2
+                                className={`text-lg sm:text-xl mb-3 sm:mb-4 font-semibold text-neutral-800 ${poppins.className}`}
+                            >
+                                Popular Posts
+                            </h2>
+                            <PopularPosts posts={popularPosts} />
+                            <h2
+                                className={`text-lg sm:text-xl mb-3 sm:mb-4 font-semibold text-neutral-800 ${poppins.className}`}
+                            >
+                                Latest Posts
+                            </h2>
+                            <PopularPosts posts={latestPosts} />
+                        </div>
+                    </aside>
+                </div>
             </div>
-
-            <header className="px-4 sm:px-6 md:px-8 lg:px-10 pb-0 text-neutral-800">
-              {/* Title */}
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-semibold leading-tight tracking-tight font-serif mb-3 text-neutral-900">
-                {post.title}
-              </h1>
-
-              {/* Meta + Share */}
-              <div className="flex flex-col sm:flex-row sm:items-start md:items-center md:justify-between gap-3 md:gap-6 mb-4">
-                {/* Meta Info */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-neutral-500">
-                  {post.author && (
-                    <div className="flex items-center gap-1">
-                      <User className="w-3 h-3 sm:w-4 sm:h-4 text-neutral-400" />
-                      <span className="font-medium text-neutral-700">
-                        {post.author}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 text-neutral-400" />
-                    <span className="font-medium">
-                      {formatDate(post.createdAt)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-neutral-400" />
-                    <span className="font-medium">{readTime}</span>
-                  </div>
-                </div>
-
-                {/* Share Buttons */}
-                <div className="flex justify-start sm:justify-end">
-                  <SocialShareButtons />
-                </div>
-              </div>
-
-              {/* Tags */}
-              {Array.isArray(post.tags) && post.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4 sm:mb-6">
-                  {post.tags.map((tag: string, index: number) => (
-                    <span
-                      key={`${tag}-${index}`}
-                      className="px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer bg-neutral-100 text-neutral-700 border border-neutral-200 hover:bg-neutral-200 transition-all duration-200"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {/* Banner Image */}
-              {post.banner && (
-                <div className="relative w-full h-48 sm:h-52 md:h-64 lg:h-72 xl:h-80 mb-6 sm:mb-8 rounded-xl overflow-hidden shadow-lg">
-                  <Image
-                    src={post.banner}
-                    alt={`Banner for ${post.title}`}
-                    fill
-                    className="object-cover hover:scale-105 transition-transform duration-700"
-                    sizes="(max-width: 768px) 100vw, 800px"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                </div>
-              )}
-            </header>
-
-            <div className="px-4 sm:px-6 md:px-10 pb-8 sm:pb-12">
-              {renderMarkdown(post.content)}
-            </div>
-
-            <footer className="px-4 sm:px-6 md:px-10 py-6 sm:py-8 border-t border-neutral-200">
-              {/* Optional footer content can go here */}
-            </footer>
-          </article>
-
-          <aside className="lg:w-80">
-            <div className="sticky top-4 sm:top-8 space-y-8 sm:space-y-10">
-              <h2
-                className={`text-lg sm:text-xl mb-3 sm:mb-4 font-semibold text-neutral-800 ${poppins.className}`}
-              >
-                Popular Posts
-              </h2>
-              <PopularPosts posts={popularPosts} />
-              <h2
-                className={`text-lg sm:text-xl mb-3 sm:mb-4 font-semibold text-neutral-800 ${poppins.className}`}
-              >
-                Latest Posts
-              </h2>
-              <PopularPosts posts={latestPosts} />
-            </div>
-          </aside>
-        </div>
-      </div>
-      <Footer />
-    </>
-  );
+            <Footer />
+        </>
+    );
 }
 
-export async function generateMetadata({
-  params: { slug },
-}: BlogPostPageProps): Promise<Metadata> {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-  const postRes = await fetch(`${apiBase}/blogs/${slug}`, {
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-  });
-
-  if (!postRes.ok) {
-    return {
-      title: "Blog Post Not Found",
-      description: "The requested blog post could not be found.",
-    };
-  }
-
-  const postJson = await postRes.json();
-  const post: Blog = postJson.data;
-
-  return {
-    title: `${post.title} | My Blog`,
-    description: post.description || "A blog post about interesting topics.",
-    keywords: post.tags?.join(", ") || "blog, article, post",
-    openGraph: {
-      title: post.title,
-      description: post.description || "A blog post about interesting topics.",
-      type: "article",
-      publishedTime: post.createdAt,
-      authors: post.author ? [post.author] : undefined,
-      tags: post.tags,
-      images: post.banner
-        ? [
-            {
-              url: post.banner,
-              width: 1200,
-              height: 630,
-              alt: post.title,
-            },
-          ]
-        : undefined,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: post.title,
-      description: post.description || "A blog post about interesting topics.",
-      images: post.banner ? [post.banner] : undefined,
-    },
-  };
-}
-
-export default async function BlogPostPage({
-  params: { slug },
-}: BlogPostPageProps): Promise<JSX.Element> {
-  try {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
-    // Fetch all data in parallel
-    const [postRes, popularRes, latestRes] = await Promise.all([
-      fetch(`${apiBase}/blogs/${slug}`, {
+export async function generateMetadata(props: { params: tParams }) {
+    const { slug } = await props.params;
+    const blogId = slug[1];
+    const postRes = await fetch(`${api.blog.allBlogs}/${blogId}`, {
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
-      }),
-      fetch(`${apiBase}/blogsPopular`, {
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-      }),
-      fetch(`${apiBase}/blogsPage?page=1&limit=5`, {
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-      }),
-    ]);
+    });
 
-    // Check if post exists
     if (!postRes.ok) {
-      console.error(`Failed to fetch post: ${postRes.status}`);
-      return notFound();
+        return {
+            title: "Blog Post Not Found",
+            description: "The requested blog post could not be found.",
+        };
     }
 
     const postJson = await postRes.json();
-    if (!postJson?.data) {
-      console.error("Post data not found in response");
-      return notFound();
-    }
-
-    const [popularJson, latestJson] = await Promise.all([
-      popularRes.json(),
-      latestRes.json(),
-    ]);
-
     const post: Blog = postJson.data;
-    const popularPosts: Blog[] = popularJson.data || [];
-    const latestPosts: Blog[] = latestJson.data || [];
 
-    return (
-      <BlogPostComponent
-        post={post}
-        popularPosts={popularPosts}
-        latestPosts={latestPosts}
-      />
-    );
-  } catch (error) {
-    console.error("Error fetching blog post:", error);
-    return notFound();
-  }
+    return {
+        title: `${post.title} | My Blog`,
+        description:
+            post.description || "A blog post about interesting topics.",
+        keywords: post.tags?.join(", ") || "blog, article, post",
+        openGraph: {
+            title: post.title,
+            description:
+                post.description || "A blog post about interesting topics.",
+            type: "article",
+            publishedTime: post.createdAt,
+            authors: post.author ? [post.author] : undefined,
+            tags: post.tags,
+            images: post.banner
+                ? [
+                      {
+                          url: post.banner,
+                          width: 1200,
+                          height: 630,
+                          alt: post.title,
+                      },
+                  ]
+                : undefined,
+        },
+        twitter: {
+            card: "summary_large_image",
+            title: post.title,
+            description:
+                post.description || "A blog post about interesting topics.",
+            images: post.banner ? [post.banner] : undefined,
+        },
+    };
+}
+
+export default async function BlogPostPage(props: { params: tParams }) {
+    const { slug } = await props.params;
+    const blogId = slug[1];
+    try {
+        // Fetch all data in parallel
+        const [postRes, popularRes, latestRes] = await Promise.all([
+            fetch(`${api.blog.allBlogs}/${blogId}`, {
+                cache: "no-store",
+                headers: { "Content-Type": "application/json" },
+            }),
+            fetch(`${api.blog.popularBlogs}`, {
+                cache: "no-store",
+                headers: { "Content-Type": "application/json" },
+            }),
+            fetch(`${api.blog.allBlogs}?page=1&limit=5`, {
+                cache: "no-store",
+                headers: { "Content-Type": "application/json" },
+            }),
+        ]);
+
+        // Check if post exists
+        if (!postRes.ok) {
+            console.error(`Failed to fetch post: ${postRes.status}`);
+            return notFound();
+        }
+
+        const postJson = await postRes.json();
+        if (!postJson?.data) {
+            console.error("Post data not found in response");
+            return notFound();
+        }
+
+        const [popularJson, latestJson] = await Promise.all([
+            popularRes.json(),
+            latestRes.json(),
+        ]);
+
+        const post: Blog = postJson.data;
+        const popularPosts: Blog[] = popularJson.data || [];
+        const latestPosts: Blog[] = latestJson.data || [];
+
+        return (
+            <BlogPostComponent
+                post={post}
+                popularPosts={popularPosts}
+                latestPosts={latestPosts}
+            />
+        );
+    } catch (error) {
+        console.error("Error fetching blog post:", error);
+        return notFound();
+    }
 }
