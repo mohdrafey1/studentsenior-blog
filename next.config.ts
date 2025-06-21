@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
       "example.com",
       "plus.unsplash.com",
       "images.unsplash.com",
+      "studentsenior.in",
+      "via.placeholder.com",
     ], // Add other domains as needed
   },
 };
