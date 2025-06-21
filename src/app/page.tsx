@@ -11,6 +11,7 @@ import AdSenseAd from "./components/Ads/AdSenseAd";
 import Footer from "./components/Footer";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { api } from "@/config/apiConfig";
 
 const poppins = Poppins({ subsets: ["latin"], weight: "600", preload: true });
 
@@ -32,11 +33,10 @@ function MainContent() {
         "web devlopment",
     ];
 
-    const BASE_API = process.env.NEXT_PUBLIC_API_URL;
     useEffect(() => {
         const fetchPosts = async () => {
             try {
-                const res = await fetch(`${BASE_API}/blogs`);
+                const res = await fetch(`${api.blog.allBlogs}`);
                 const data = await res.json();
                 setPosts(data.data);
             } catch (error) {
@@ -45,7 +45,7 @@ function MainContent() {
         };
         const fetchPopular = async () => {
             try {
-                const res = await fetch(`${BASE_API}/blogsPopular`);
+                const res = await fetch(`${api.blog.popularBlogs}`);
                 const data = await res.json();
                 setPopularPost(data.data);
             } catch (error) {
@@ -54,7 +54,7 @@ function MainContent() {
         };
         fetchPopular();
         fetchPosts();
-    }, [BASE_API]);
+    }, []);
 
     const handleShare = (post: BlogPost) => {
         if (navigator.share) {

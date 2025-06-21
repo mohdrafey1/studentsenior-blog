@@ -8,24 +8,15 @@ import { ArrowLeft, Calendar } from "lucide-react";
 import Header from "@/app/components/header";
 import Footer from "@/app/components/Footer";
 import { Poppins } from "next/font/google";
+import { api } from "@/config/apiConfig";
+import { BlogPost } from "@/constant/interface";
+import { formatDate } from "@/utils/formatting";
 
 const poppins = Poppins({
     subsets: ["latin"],
     weight: ["400", "600"],
     preload: true,
 });
-
-interface BlogPost {
-    _id: string;
-    title: string;
-    description?: string;
-    banner?: string;
-    author?: string;
-    createdAt?: string;
-    slug: string;
-    total_reads: number;
-    readTime?: string;
-}
 
 // Separate the search results content into a client component
 function SearchResults() {
@@ -47,10 +38,8 @@ function SearchResults() {
                 setIsLoading(true);
                 setError(null);
 
-                const apiBase =
-                    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
                 const response = await fetch(
-                    `${apiBase}/blog/search?q=${encodeURIComponent(query)}`
+                    `${api.blog.allBlogs}?q=${encodeURIComponent(query)}`
                 );
 
                 if (!response.ok) {
@@ -70,16 +59,6 @@ function SearchResults() {
 
         fetchSearchResults();
     }, [query]);
-
-    const formatDate = (dateString?: string): string => {
-        if (!dateString) return "";
-        const date = new Date(dateString);
-        return date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-        });
-    };
 
     return (
         <div className="mb-8">

@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Lora, Poppins } from "next/font/google";
+import { BlogListProps } from "@/constant/interface";
 
 const lora = Lora({
     subsets: ["latin"],
@@ -16,29 +17,6 @@ const poppins = Poppins({
     weight: ["400", "600"],
     preload: true,
 });
-
-export interface BlogPost {
-    _id: string;
-    title: string;
-    content?: string;
-    description?: string;
-    banner?: string;
-    category?: string;
-    author?: string;
-    date?: string;
-    likes?: number;
-    total_reads: string;
-    createdAt?: string;
-    updatedAt?: string;
-    slug: string;
-    isDraft?: boolean;
-    tags?: string[];
-    total_likes?: number;
-}
-
-interface BlogListProps {
-    posts: BlogPost[];
-}
 
 const PopularPosts: React.FC<BlogListProps> = ({ posts }) => {
     return (
@@ -69,13 +47,11 @@ const PopularPosts: React.FC<BlogListProps> = ({ posts }) => {
                                     {post.title}
                                 </h3>
 
-                                {(post.description || post.content) && (
+                                {(post.description || post.description) && (
                                     <p
                                         className={`text-xs sm:text-sm text-neutral-600 line-clamp-2 mt-1 ${lora.className}`}
                                     >
-                                        {(
-                                            post.description || post.content
-                                        )?.slice(0, 140)}
+                                        {post.description?.slice(0, 140)}
                                     </p>
                                 )}
                             </div>

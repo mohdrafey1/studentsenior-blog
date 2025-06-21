@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { Share2, User, Clock } from "lucide-react";
 import { Poppins, Inter } from "next/font/google";
+import { formatDate, getReadTime } from "@/utils/formatting";
 
 const poppins = Poppins({
     subsets: ["latin"],
@@ -52,20 +53,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
         }
     };
 
-    const formattedDate = new Date(post.createdAt).toLocaleDateString(
-        undefined,
-        {
-            month: "short",
-            day: "numeric",
-        }
-    );
-
-    const getReadTime = (content?: string) => {
-        if (!content) return "2 min read";
-        const words = content.split(" ").length;
-        const readTime = Math.ceil(words / 200);
-        return `${readTime} min read`;
-    };
+    const formattedDate = formatDate(post.createdAt);
 
     return (
         <article

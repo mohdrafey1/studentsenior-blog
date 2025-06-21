@@ -9,65 +9,23 @@ import { atomDark } from "react-syntax-highlighter/dist/cjs/styles/prism";
 import PopularPosts from "@/app/components/popular-post";
 import Header from "@/app/components/header";
 import Footer from "@/app/components/Footer";
-import { Poppins } from "next/font/google";
 import React from "react";
 import SocialShareButtons from "@/app/components/share-buttons";
-
-export interface Blog {
-    _id: string;
-    title: string;
-    content?: string;
-    description?: string;
-    banner?: string;
-    category?: string;
-    author?: string;
-    date?: string;
-    likes?: number;
-    total_reads: string;
-    createdAt?: string;
-    updatedAt?: string;
-    slug: string;
-    isDraft?: boolean;
-    tags?: string[];
-    total_likes?: number;
-}
-
-interface BlogPostComponentProps {
-    post: Blog;
-    popularPosts: Blog[];
-    latestPosts: Blog[];
-}
-
-type tParams = Promise<{ slug: string[] }>;
+import { api } from "@/config/apiConfig";
+import {
+    BlogPostComponentProps,
+    tParams,
+    Blog,
+    CodeProps,
+} from "@/constant/interface";
+import { Poppins } from "next/font/google";
+import { formatReadTime, formatDate } from "@/utils/formatting";
 
 const poppins = Poppins({
     subsets: ["latin"],
     weight: ["400", "600"],
     preload: true,
 });
-
-function formatDate(dateString?: string): string {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    });
-}
-
-function formatReadTime(content: string = ""): string {
-    const wordsPerMinute = 200;
-    const wordCount = content.trim().split(/\s+/).length;
-    const readTime = Math.ceil(wordCount / wordsPerMinute);
-    return `${readTime} min read`;
-}
-
-interface CodeProps extends React.HTMLAttributes<HTMLElement> {
-    inline?: boolean;
-    className?: string;
-    children?: React.ReactNode;
-}
 
 function renderMarkdown(content: string = ""): React.ReactElement {
     if (!content.trim()) {
@@ -379,8 +337,7 @@ function BlogPostComponent({
 export async function generateMetadata(props: { params: tParams }) {
     const { slug } = await props.params;
     const blogId = slug[1];
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    const postRes = await fetch(`${apiBase}/blogs/${blogId}`, {
+    const postRes = await fetch(`${api.blog.allBlogs}/${blogId}`, {
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
     });
@@ -433,20 +390,17 @@ export default async function BlogPostPage(props: { params: tParams }) {
     const { slug } = await props.params;
     const blogId = slug[1];
     try {
-        const apiBase =
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-
         // Fetch all data in parallel
         const [postRes, popularRes, latestRes] = await Promise.all([
-            fetch(`${apiBase}/blogs/${blogId}`, {
+            fetch(`${api.blog.allBlogs}/${blogId}`, {
                 cache: "no-store",
                 headers: { "Content-Type": "application/json" },
             }),
-            fetch(`${apiBase}/blogsPopular`, {
+            fetch(`${api.blog.popularBlogs}`, {
                 cache: "no-store",
                 headers: { "Content-Type": "application/json" },
             }),
-            fetch(`${apiBase}/blogsPage?page=1&limit=5`, {
+            fetch(`${api.blog.allBlogs}?page=1&limit=5`, {
                 cache: "no-store",
                 headers: { "Content-Type": "application/json" },
             }),
