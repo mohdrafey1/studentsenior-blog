@@ -95,7 +95,7 @@ function MainContent() {
                 />
               ))}
             </div>
-            <AdSenseAd adSlot="4650270379" />
+            <AdSenseAd />
           </section>
         </main>
 

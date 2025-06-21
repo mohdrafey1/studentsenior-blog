@@ -3,19 +3,30 @@
 import { useEffect } from "react";
 
 type Props = {
-  adSlot?: string;
   style?: React.CSSProperties;
   className?: string;
 };
 
 export default function AdSenseAd({
-  adSlot = "1234567890", // ✅ Test Ad Slot
-  style = { display: "block", width: "100%", height: "100px" },
+  style = { display: "block", width: "100%" },
   className = "",
 }: Props) {
   useEffect(() => {
+    // Load AdSense script only once
+    const scriptId = "adsbygoogle-js";
+    if (!document.getElementById(scriptId)) {
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.async = true;
+      script.src =
+        "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825";
+      script.crossOrigin = "anonymous";
+      document.head.appendChild(script);
+    }
+
+    // Render ad
     try {
-      // @ts-expect-error adsbygoogle is injected by external script
+      // @ts-expect-error injected by Google script
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch (err) {
       console.error("AdSense error:", err);
@@ -26,10 +37,10 @@ export default function AdSenseAd({
     <ins
       className={`adsbygoogle ${className}`}
       style={style}
-      data-ad-client="ca-pub-4435788387381825" // ✅ Test Client ID
-      data-ad-slot={adSlot}
-      data-ad-format="auto"
-      data-full-width-responsive="true"
+      data-ad-client="ca-pub-4435788387381825"
+      data-ad-slot="4650270379"
+      data-ad-format="fluid"
+      data-ad-layout-key="-fb+5w+4e-db+86"
     />
   );
 }
