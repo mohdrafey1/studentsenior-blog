@@ -6,12 +6,13 @@ import Header from "@/app/components/header";
 import "@/app/globals.css";
 import { Poppins } from "next/font/google";
 import { TrendingUp } from "lucide-react";
-import PopularPosts, { BlogPost } from "./components/popular-post";
+import PopularPosts from "./components/popular-post";
 import AdSenseAd from "./components/Ads/AdSenseAd";
 import Footer from "./components/Footer";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/config/apiConfig";
+import { BlogPost } from "@/constant/interface";
 
 const poppins = Poppins({ subsets: ["latin"], weight: "600", preload: true });
 

@@ -8,7 +8,7 @@ export interface Blog {
     author?: string;
     date?: string;
     likes?: number;
-    total_reads: string;
+    total_reads: number;
     createdAt?: string;
     updatedAt?: string;
     slug: string;
