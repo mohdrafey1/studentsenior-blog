@@ -8,7 +8,7 @@ import { Poppins } from "next/font/google";
 import { TrendingUp } from "lucide-react";
 import PopularPosts from "./components/popular-post";
 import AdSenseAd from "./components/Ads/AdSenseAd";
-import Footer from "./components/Footer";
+import Footer from "./components/footer";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/config/apiConfig";
@@ -95,7 +95,7 @@ function MainContent() {
                 />
               ))}
             </div>
-            <AdSenseAd />
+            <AdSenseAd adSlot="4650270379" />
           </section>
         </main>
 
@@ -128,7 +128,7 @@ function MainContent() {
               </h3>
             </div>
             <PopularPosts posts={popularPost} />
-            <AdSenseAd />
+            <AdSenseAd adSlot="4650270379" />
           </section>
         </aside>
       </div>

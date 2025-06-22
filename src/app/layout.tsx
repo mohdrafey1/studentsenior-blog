@@ -16,11 +16,11 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Student Senior Blogs",
+  title: "SS Blogs",
   description:
     "Explore tech insights, study tips, and college resources crafted by Student Senior.",
   icons: {
-    icon: "/favicon.png",
+    icon: "/app_icon.png",
   },
 };
 
@@ -37,7 +37,7 @@ export default function RootLayout({
           id="adsense-script"
           async
           strategy="afterInteractive"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0000000000000000"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825"
           crossOrigin="anonymous"
         />
       </head>
