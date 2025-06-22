@@ -323,7 +323,7 @@ function BlogPostComponent({
 
 export async function generateMetadata(props: { params: tParams }) {
   const { slug } = await props.params;
-  const blogId = slug[1];
+  const blogId = slug;
   const postRes = await fetch(`${api.blog.allBlogs}/${blogId}`, {
     cache: "no-store",
     headers: { "Content-Type": "application/json" },
