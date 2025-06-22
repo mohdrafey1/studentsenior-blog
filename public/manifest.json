@@ -1,0 +1,21 @@
+{
+    "name": "Student Senior Blog",
+    "short_name": "SS Blog",
+    "description": "A platform for college resources and study materials.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#4f46e5",
+    "icons": [
+        {
+            "src": "/image192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/image512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
