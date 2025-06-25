@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
       "images.unsplash.com",
       "studentsenior.in",
       "via.placeholder.com",
+      "images.pexels.com",
+      "res.cloudinary.com",
     ], // Add other domains as needed
   },
 };

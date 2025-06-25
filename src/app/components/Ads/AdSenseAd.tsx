@@ -3,11 +3,13 @@
 import { useEffect } from "react";
 
 type Props = {
+  adSlot: string;
   style?: React.CSSProperties;
   className?: string;
 };
 
 export default function AdSenseAd({
+  adSlot,
   style = { display: "block", width: "100%" },
   className = "",
 }: Props) {
@@ -38,7 +40,7 @@ export default function AdSenseAd({
       className={`adsbygoogle ${className}`}
       style={style}
       data-ad-client="ca-pub-4435788387381825"
-      data-ad-slot="4650270379"
+      data-ad-slot={adSlot}
       data-ad-format="fluid"
       data-ad-layout-key="-fb+5w+4e-db+86"
     />
