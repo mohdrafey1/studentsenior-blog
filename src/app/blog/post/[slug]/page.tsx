@@ -8,7 +8,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import PopularPosts from '@/app/components/popular-post';
 import Header from '@/app/components/header';
-import Footer from '@/app/components/Footer';
+import Footer from '@/app/components/footer';
 import React from 'react';
 import SocialShareButtons from '@/app/components/share-buttons';
 import { api } from '@/config/apiConfig';
@@ -20,6 +20,7 @@ import {
 } from '@/constant/interface';
 import { Poppins } from 'next/font/google';
 import { formatReadTime, formatDate } from '@/utils/formatting';
+import AdSenseAd from '@/app/components/Ads/AdSenseAd';
 
 const poppins = Poppins({
     subsets: ['latin'],
@@ -305,6 +306,7 @@ function BlogPostComponent({
                         <div className='px-4 sm:px-6 md:px-10 pb-8 sm:pb-12'>
                             {renderMarkdown(post.content)}
                         </div>
+                        <AdSenseAd adSlot='9984010614' />
 
                         <footer className='px-4 sm:px-6 md:px-10 py-6 sm:py-8 border-t border-neutral-200'>
                             {/* Optional footer content can go here */}
@@ -324,7 +326,7 @@ function BlogPostComponent({
                             >
                                 Latest Posts
                             </h2>
-                            <PopularPosts posts={latestPosts} />
+                            <PopularPosts posts={latestPosts.slice(0, 5)} />
                         </div>
                     </aside>
                 </div>

@@ -50,3 +50,7 @@ export interface BlogListProps {
 export interface SocialShareButtonsProps {
     message?: string; // Optional custom message
 }
+
+export interface Slug {
+    slug: string;
+}
