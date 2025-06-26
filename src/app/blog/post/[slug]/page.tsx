@@ -8,7 +8,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import PopularPosts from '@/app/components/popular-post';
 import Header from '@/app/components/header';
-import Footer from '@/app/components/footer';
+import Footer from '@/app/components/Footer';
 import React from 'react';
 import SocialShareButtons from '@/app/components/share-buttons';
 import { api } from '@/config/apiConfig';
