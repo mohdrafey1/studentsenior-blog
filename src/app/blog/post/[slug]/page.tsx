@@ -100,13 +100,14 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                             {...props}
                         />
                     ),
-                    code({ inline, className, children, ...props }: CodeProps) {
+                    code({ className, children, ...props }: CodeProps) {
                         const match = /language-(\w+)/.exec(className || '');
+                        const isInline = !className;
 
-                        if (inline) {
+                        if (isInline) {
                             return (
                                 <code
-                                    className='inline bg-neutral-100 text-neutral-800 px-1.5 py-0.5 rounded font-mono text-sm border border-neutral-300'
+                                    className='inline bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-mono text-sm border border-red-300'
                                     {...props}
                                 >
                                     {String(children).trim()}
@@ -123,7 +124,6 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                                     </button>
                                 </div>
                                 <SyntaxHighlighter
-                                    // @ts-expect-error - atomDark type is not properly exported
                                     style={atomDark}
                                     language={match?.[1] || 'text'}
                                     PreTag='div'
