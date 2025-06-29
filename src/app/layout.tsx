@@ -43,6 +43,18 @@ export default function RootLayout({
                     src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825'
                     crossOrigin='anonymous'
                 />
+                <Script
+                    id='google-analytics-script'
+                    async
+                    strategy='afterInteractive'
+                    src='https://www.googletagmanager.com/gtag/js?id=G-3J80PQMG5T'
+                />
+                <Script id='google-analytics' strategy='afterInteractive'>
+                    {`window.dataLayer = window.dataLayer || [];
+                    function gtag(){dataLayer.push(arguments);}
+                    gtag('js', new Date());
+                    gtag('config', 'G-3J80PQMG5T');`}
+                </Script>
             </head>
             <body
                 className={`${poppins.variable} ${lora.variable} antialiased`}
