@@ -8,7 +8,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import PopularPosts from '@/app/components/popular-post';
 import Header from '@/app/components/header';
-import Footer from '@/app/components/footer';
+import Footer from '@/app/components/Footer';
 import React from 'react';
 import SocialShareButtons from '@/app/components/share-buttons';
 import { api } from '@/config/apiConfig';
@@ -100,13 +100,14 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                             {...props}
                         />
                     ),
-                    code({ inline, className, children, ...props }: CodeProps) {
+                    code({ className, children, ...props }: CodeProps) {
                         const match = /language-(\w+)/.exec(className || '');
+                        const isInline = !className;
 
-                        if (inline) {
+                        if (isInline) {
                             return (
                                 <code
-                                    className='inline bg-neutral-100 text-neutral-800 px-1.5 py-0.5 rounded font-mono text-sm border border-neutral-300'
+                                    className='inline bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-mono text-sm border border-red-300'
                                     {...props}
                                 >
                                     {String(children).trim()}
@@ -402,7 +403,7 @@ export default async function BlogPostPage(props: { params: tParams }) {
                 cache: 'no-store',
                 headers: { 'Content-Type': 'application/json' },
             }),
-            fetch(`${api.blog.allBlogs}?page=1&limit=5`, {
+            fetch(`${api.blog.allBlogs}?page=1&limit=10`, {
                 cache: 'no-store',
                 headers: { 'Content-Type': 'application/json' },
             }),

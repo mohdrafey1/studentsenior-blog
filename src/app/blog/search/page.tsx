@@ -6,7 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, Calendar } from 'lucide-react';
 import Header from '@/app/components/header';
-import Footer from '@/app/components/footer';
+import Footer from '@/app/components/Footer';
 import { Poppins } from 'next/font/google';
 import { api } from '@/config/apiConfig';
 import { BlogPost } from '@/constant/interface';

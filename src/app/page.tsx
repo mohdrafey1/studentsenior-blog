@@ -8,18 +8,21 @@ import { Poppins } from 'next/font/google';
 import { TrendingUp } from 'lucide-react';
 import PopularPosts from './components/popular-post';
 import AdSenseAd from './components/Ads/AdSenseAd';
-import Footer from './components/footer';
+import Footer from './components/Footer';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api } from '@/config/apiConfig';
 import { BlogPost } from '@/constant/interface';
+import { api } from '@/config/apiConfig';
 
 const poppins = Poppins({ subsets: ['latin'], weight: '600', preload: true });
 
-// Main content component that handles data fetching and display
 function MainContent() {
     const [posts, setPosts] = useState<BlogPost[]>([]);
     const [popularPost, setPopularPost] = useState<BlogPost[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const postsPerPage = 10;
+
     const router = useRouter();
 
     const category = [
@@ -34,28 +37,45 @@ function MainContent() {
         'web devlopment',
     ];
 
+    const fetchPaginatedPosts = async () => {
+        try {
+            const res = await fetch(
+                `${api.blog.paginateblog}?page=${currentPage}&limit=${postsPerPage}`
+            );
+            const data = await res.json();
+            setPosts(data.data);
+            setTotalPages(Math.ceil(data.metadata.total / postsPerPage));
+        } catch (error) {
+            console.error('Error fetching paginated posts:', error);
+        }
+    };
+
+    const fetchPopular = async () => {
+        try {
+            const res = await fetch(api.blog.popularBlogs);
+            const data = await res.json();
+            setPopularPost(data.data);
+        } catch (error) {
+            console.error('Error fetching popular posts:', error);
+        }
+    };
+
     useEffect(() => {
-        const fetchPosts = async () => {
-            try {
-                const res = await fetch(`${api.blog.allBlogs}`);
-                const data = await res.json();
-                setPosts(data.data);
-            } catch (error) {
-                console.error('Error fetching posts:', error);
-            }
-        };
-        const fetchPopular = async () => {
-            try {
-                const res = await fetch(`${api.blog.popularBlogs}`);
-                const data = await res.json();
-                setPopularPost(data.data);
-            } catch (error) {
-                console.error('Error fetching posts:', error);
-            }
-        };
         fetchPopular();
-        fetchPosts();
     }, []);
+
+    useEffect(() => {
+        fetchPaginatedPosts();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [currentPage]);
+
+    const goToNextPage = () => {
+        if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
+    };
+
+    const goToPrevPage = () => {
+        if (currentPage > 1) setCurrentPage((prev) => prev - 1);
+    };
 
     const handleShare = (post: BlogPost) => {
         if (navigator.share) {
@@ -69,6 +89,7 @@ function MainContent() {
             alert('Link copied to clipboard!');
         }
     };
+
     const handlePostClick = (slug: string) => {
         router.push(`/blog/post/${slug}`);
     };
@@ -84,6 +105,7 @@ function MainContent() {
                         >
                             Home
                         </h2>
+
                         <div className='space-y-6'>
                             {posts.map((post) => (
                                 <BlogPostCard
@@ -95,6 +117,28 @@ function MainContent() {
                                 />
                             ))}
                         </div>
+
+                        {/* Pagination Controls */}
+                        <div className='mt-8 flex justify-center items-center gap-4'>
+                            <button
+                                onClick={goToPrevPage}
+                                disabled={currentPage === 1}
+                                className='px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50'
+                            >
+                                Previous
+                            </button>
+                            <span className='text-gray-700'>
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                                onClick={goToNextPage}
+                                disabled={currentPage === totalPages}
+                                className='px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50'
+                            >
+                                Next
+                            </button>
+                        </div>
+
                         <AdSenseAd adSlot='4650270379' />
                     </section>
                 </main>
@@ -142,7 +186,6 @@ function MainContent() {
     );
 }
 
-// Main page component with Suspense boundaries
 export default function Home() {
     return (
         <>
