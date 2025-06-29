@@ -124,6 +124,7 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                                     </button>
                                 </div>
                                 <SyntaxHighlighter
+                                    // @ts-expect-error - atomDark type is not properly exported
                                     style={atomDark}
                                     language={match?.[1] || 'text'}
                                     PreTag='div'
@@ -402,7 +403,7 @@ export default async function BlogPostPage(props: { params: tParams }) {
                 cache: 'no-store',
                 headers: { 'Content-Type': 'application/json' },
             }),
-            fetch(`${api.blog.allBlogs}?page=1&limit=5`, {
+            fetch(`${api.blog.allBlogs}?page=1&limit=10`, {
                 cache: 'no-store',
                 headers: { 'Content-Type': 'application/json' },
             }),

@@ -1,49 +1,54 @@
-import type { Metadata } from "next";
-import { Poppins, Lora } from "next/font/google";
-import Script from "next/script"; // ✅ Import Script component
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Poppins, Lora } from 'next/font/google';
+import Script from 'next/script'; // ✅ Import Script component
+import './globals.css';
 
 const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["600"],
+    variable: '--font-poppins',
+    subsets: ['latin'],
+    weight: ['600'],
 });
 
 const lora = Lora({
-  variable: "--font-lora",
-  subsets: ["latin"],
-  weight: ["400"],
+    variable: '--font-lora',
+    subsets: ['latin'],
+    weight: ['400'],
 });
 
 export const metadata: Metadata = {
-  title: "SS Blogs",
-  description:
-    "Explore tech insights, study tips, and college resources crafted by Student Senior.",
-  icons: {
-    icon: "/app_icon.png",
-  },
+    title: `SS Blogs${
+        process.env.NODE_ENV !== 'production' ? ` [Staging]` : ''
+    }`,
+    description:
+        'Explore tech insights, study tips, and college resources crafted by Student Senior.',
+    icons: {
+        icon: '/app_icon.png',
+    },
+    manifest: '/manifest.json',
 };
 
 export default function RootLayout({
-  children,
+    children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en">
-      <head>
-        {/* ✅ Google AdSense Script (Test Client ID) */}
-        <Script
-          id="adsense-script"
-          async
-          strategy="afterInteractive"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825"
-          crossOrigin="anonymous"
-        />
-      </head>
-      <body className={`${poppins.variable} ${lora.variable} antialiased`}>
-        {children}
-      </body>
-    </html>
-  );
+    return (
+        <html lang='en'>
+            <head>
+                {/* ✅ Google AdSense Script (Test Client ID) */}
+                <Script
+                    id='adsense-script'
+                    async
+                    strategy='afterInteractive'
+                    src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825'
+                    crossOrigin='anonymous'
+                />
+            </head>
+            <body
+                className={`${poppins.variable} ${lora.variable} antialiased`}
+            >
+                {children}
+            </body>
+        </html>
+    );
 }

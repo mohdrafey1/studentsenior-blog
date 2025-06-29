@@ -8,7 +8,7 @@ import { Poppins } from 'next/font/google';
 import { TrendingUp } from 'lucide-react';
 import PopularPosts from './components/popular-post';
 import AdSenseAd from './components/Ads/AdSenseAd';
-import Footer from './components/footer';
+import Footer from './components/Footer';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BlogPost } from '@/constant/interface';
@@ -21,7 +21,7 @@ function MainContent() {
     const [popularPost, setPopularPost] = useState<BlogPost[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const postsPerPage = 5;
+    const postsPerPage = 10;
 
     const router = useRouter();
 
