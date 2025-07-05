@@ -35,7 +35,7 @@ export default function RootLayout({
     return (
         <html lang='en'>
             <head>
-                {/* ✅ Google AdSense Script (Test Client ID) */}
+               <meta name="google-site-verification" content="kFmO-Qmw1qGUJOnPkN1PfNbTa3md37yrz08XxYwuE28" />
                 <Script
                     id='adsense-script'
                     async
