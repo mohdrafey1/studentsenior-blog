@@ -8,7 +8,7 @@ import { Poppins } from 'next/font/google';
 import { TrendingUp } from 'lucide-react';
 import PopularPosts from './components/popular-post';
 import AdSenseAd from './components/Ads/AdSenseAd';
-import Footer from './components/Footer';
+import Footer from '@/app/components/footer';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BlogPost } from '@/constant/interface';

@@ -20,20 +20,21 @@ const Footer = () => {
                     <Link href='/' className='hover:text-orange-500 transition'>
                         Home
                     </Link>
+
                     <Link
-                        href='/blogs'
-                        className='hover:text-orange-500 transition'
-                    >
-                        Blogs
-                    </Link>
-                    <Link
-                        href='/about'
+                        href='https://www.studentsenior.com/about-us'
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        aria-label='About Us'
                         className='hover:text-orange-500 transition'
                     >
                         About
                     </Link>
                     <Link
-                        href='/contact'
+                        href='https://www.studentsenior.com/contact-us'
+                        target='_blank'
+                        rel='noopener noreferrer'
+                        aria-label='Contact Us'
                         className='hover:text-orange-500 transition'
                     >
                         Contact
