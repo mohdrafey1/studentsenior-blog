@@ -1,18 +1,42 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  images: {
-    domains: [
-      "placehold.co",
-      "example.com",
-      "plus.unsplash.com",
-      "images.unsplash.com",
-      "studentsenior.in",
-      "via.placeholder.com",
-      "images.pexels.com",
-      "res.cloudinary.com",
-    ], // Add other domains as needed
-  },
+    images: {
+        remotePatterns: [
+            {
+                protocol: 'https',
+                hostname: 'placehold.co',
+            },
+            {
+                protocol: 'https',
+                hostname: 'example.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'plus.unsplash.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'images.unsplash.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'studentsenior.in',
+            },
+            {
+                protocol: 'https',
+                hostname: 'via.placeholder.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'images.pexels.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'res.cloudinary.com',
+            },
+        ],
+    },
 };
 
 export default nextConfig;

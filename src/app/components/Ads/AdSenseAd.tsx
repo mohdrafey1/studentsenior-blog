@@ -14,32 +14,52 @@ export default function AdSenseAd({
     className = '',
 }: Props) {
     const adRef = useRef<HTMLModElement>(null);
-    const pushedRef = useRef(false); // ✅ Track if we already pushed
+    const pushedRef = useRef(false);
 
     useEffect(() => {
+        // 🛑 Skip ads in staging or localhost
+        if (
+            process.env.NEXT_PUBLIC_ENV === 'staging' ||
+            window.location.hostname.includes('localhost')
+        ) {
+            console.log('AdSense disabled in staging/local');
+            return;
+        }
+
+        // Ensure we are in the browser
+        if (typeof window === 'undefined') return;
+
         // Load AdSense script only once
         const scriptId = 'adsbygoogle-js';
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
             script.id = scriptId;
             script.async = true;
-            script.src =
-                'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825';
+            script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825`;
             script.crossOrigin = 'anonymous';
             document.head.appendChild(script);
         }
 
-        // Render ad only once
-        if (!pushedRef.current) {
+        // Push ad only once
+        if (!pushedRef.current && adRef.current) {
             try {
-                // @ts-expect-error injected by Google script
+                // @ts-expect-error from Google
                 (window.adsbygoogle = window.adsbygoogle || []).push({});
-                pushedRef.current = true; // ✅ Prevent multiple pushes
+                pushedRef.current = true;
             } catch (err) {
-                console.error('AdSense error:', err);
+                console.error('AdSense load error:', err);
             }
         }
     }, []);
+
+    // 🛑 Render nothing in staging/local
+    if (
+        typeof window !== 'undefined' &&
+        (process.env.NEXT_PUBLIC_ENV === 'staging' ||
+            window.location.hostname.includes('localhost'))
+    ) {
+        return null;
+    }
 
     return (
         <ins

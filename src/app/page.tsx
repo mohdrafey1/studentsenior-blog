@@ -78,14 +78,24 @@ function MainContent() {
     };
 
     const handleShare = (post: BlogPost) => {
+        const postUrl = `${window.location.origin}/${post.slug}`;
+
+        // Always copy the link first
+        navigator.clipboard
+            .writeText(postUrl)
+            .then(() => console.log('Link copied to clipboard!'))
+            .catch((err) => console.error('Failed to copy link:', err));
+
+        // If Web Share API is available, trigger it
         if (navigator.share) {
-            navigator.share({
-                title: post.title,
-                text: post.description,
-                url: window.location.href,
-            });
+            navigator
+                .share({
+                    title: post.title,
+                    text: post.description,
+                    url: postUrl,
+                })
+                .catch((err) => console.error('Share failed:', err));
         } else {
-            navigator.clipboard.writeText(window.location.href);
             alert('Link copied to clipboard!');
         }
     };
