@@ -78,7 +78,7 @@ function MainContent() {
     };
 
     const handleShare = (post: BlogPost) => {
-        const postUrl = `${window.location.origin}/${post.slug}`;
+        const postUrl = `${window.location.origin}/blog/post/${post.slug}`;
 
         // Always copy the link first
         navigator.clipboard
