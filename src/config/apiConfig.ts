@@ -6,6 +6,8 @@ export const api = {
         allBlogs: `${API_BASE_URL}/blogs`,
         popularBlogs: `${API_BASE_URL}/blogsPopular`,
         paginateblog: `${API_BASE_URL}/blogsPage`,
+        latestBlogs: `${API_BASE_URL}/latestBlogs`,
+        searchBlogs: `${API_BASE_URL}/blog/search`,
         sitemap: `${API_BASE_URL}/sitemap`,
     },
 };

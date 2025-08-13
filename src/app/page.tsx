@@ -78,14 +78,24 @@ function MainContent() {
     };
 
     const handleShare = (post: BlogPost) => {
+        const postUrl = `${window.location.origin}/${post.slug}`;
+
+        // Always copy the link first
+        navigator.clipboard
+            .writeText(postUrl)
+            .then(() => console.log('Link copied to clipboard!'))
+            .catch((err) => console.error('Failed to copy link:', err));
+
+        // If Web Share API is available, trigger it
         if (navigator.share) {
-            navigator.share({
-                title: post.title,
-                text: post.description,
-                url: window.location.href,
-            });
+            navigator
+                .share({
+                    title: post.title,
+                    text: post.description,
+                    url: postUrl,
+                })
+                .catch((err) => console.error('Share failed:', err));
         } else {
-            navigator.clipboard.writeText(window.location.href);
             alert('Link copied to clipboard!');
         }
     };
@@ -107,11 +117,11 @@ function MainContent() {
                         </h2>
 
                         <div className='space-y-6'>
-                            {posts.map((post) => (
+                            {posts.map((post, idx) => (
                                 <BlogPostCard
                                     key={post._id}
-                                    // @ts-expect-error fix type later
                                     post={post}
+                                    priority={idx === 0 && currentPage === 1} // ✅ Only first above-the-fold image
                                     onShare={() => handleShare(post)}
                                     onClick={() => handlePostClick(post.slug)}
                                 />

@@ -39,7 +39,7 @@ function SearchResults() {
                 setError(null);
 
                 const response = await fetch(
-                    `${api.blog.allBlogs}?q=${encodeURIComponent(query)}`
+                    `${api.blog.searchBlogs}?q=${encodeURIComponent(query)}`
                 );
 
                 if (!response.ok) {

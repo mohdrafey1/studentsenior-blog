@@ -1,4 +1,4 @@
-import { Facebook, Twitter, Linkedin } from 'lucide-react';
+import { Linkedin } from 'lucide-react';
 import Link from 'next/link';
 
 const Footer = () => {
@@ -44,25 +44,16 @@ const Footer = () => {
                 {/* Social Icons */}
                 <div className='flex space-x-4 text-gray-300'>
                     <Link
-                        href='https://facebook.com'
+                        href='https://www.studentsenior.com'
                         target='_blank'
                         rel='noopener noreferrer'
                         aria-label='Facebook'
                         className='hover:text-orange-500 transition'
                     >
-                        <Facebook size={24} />
+                        Student Senior
                     </Link>
                     <Link
-                        href='https://twitter.com'
-                        target='_blank'
-                        rel='noopener noreferrer'
-                        aria-label='Twitter'
-                        className='hover:text-orange-500 transition'
-                    >
-                        <Twitter size={24} />
-                    </Link>
-                    <Link
-                        href='https://linkedin.com'
+                        href='https://www.linkedin.com/company/student-senior'
                         target='_blank'
                         rel='noopener noreferrer'
                         aria-label='LinkedIn'

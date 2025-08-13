@@ -337,79 +337,95 @@ function BlogPostComponent({
     );
 }
 
-export async function generateMetadata(props: { params: tParams }) {
-    const { slug } = await props.params;
+export async function generateMetadata({ params }: { params: tParams }) {
+    const { slug } = await params;
     const blogId = slug;
-    const postRes = await fetch(`${api.blog.allBlogs}/${blogId}`, {
-        cache: 'no-store',
-        headers: { 'Content-Type': 'application/json' },
-    });
 
-    if (!postRes.ok) {
+    try {
+        const postRes = await fetch(`${api.blog.allBlogs}/${blogId}`, {
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!postRes.ok) {
+            return {
+                title: 'Blog Post Not Found',
+                description: 'The requested blog post could not be found.',
+            };
+        }
+
+        const postJson = await postRes.json();
+        const post: Blog = postJson.data;
+
+        if (!post) {
+            return {
+                title: 'Blog Post Not Found',
+                description: 'The requested blog post could not be found.',
+            };
+        }
+
         return {
-            title: 'Blog Post Not Found',
-            description: 'The requested blog post could not be found.',
+            title: `${post.title} | My Blog`,
+            description:
+                post.description || 'A blog post about interesting topics.',
+            keywords: post.tags?.join(', ') || 'blog, article, post',
+            openGraph: {
+                title: post.title,
+                description:
+                    post.description || 'A blog post about interesting topics.',
+                type: 'article',
+                publishedTime: post.createdAt,
+                authors: post.author ? [post.author] : undefined,
+                tags: post.tags,
+                images: post.banner
+                    ? [
+                          {
+                              url: post.banner,
+                              width: 1200,
+                              height: 630,
+                              alt: post.title,
+                          },
+                      ]
+                    : undefined,
+            },
+            twitter: {
+                card: 'summary_large_image',
+                title: post.title,
+                description:
+                    post.description || 'A blog post about interesting topics.',
+                images: post.banner ? [post.banner] : undefined,
+            },
+        };
+    } catch (error) {
+        console.error('Error generating metadata:', error);
+        return {
+            title: 'Error Loading Blog',
+            description: 'An error occurred while loading the blog metadata.',
         };
     }
-
-    const postJson = await postRes.json();
-    const post: Blog = postJson.data;
-
-    return {
-        title: `${post.title} | My Blog`,
-        description:
-            post.description || 'A blog post about interesting topics.',
-        keywords: post.tags?.join(', ') || 'blog, article, post',
-        openGraph: {
-            title: post.title,
-            description:
-                post.description || 'A blog post about interesting topics.',
-            type: 'article',
-            publishedTime: post.createdAt,
-            authors: post.author ? [post.author] : undefined,
-            tags: post.tags,
-            images: post.banner
-                ? [
-                      {
-                          url: post.banner,
-                          width: 1200,
-                          height: 630,
-                          alt: post.title,
-                      },
-                  ]
-                : undefined,
-        },
-        twitter: {
-            card: 'summary_large_image',
-            title: post.title,
-            description:
-                post.description || 'A blog post about interesting topics.',
-            images: post.banner ? [post.banner] : undefined,
-        },
-    };
 }
 
-export default async function BlogPostPage(props: { params: tParams }) {
-    const { slug } = await props.params;
+export default async function BlogPostPage({
+    params,
+}: {
+    params: Promise<{ slug: string }>;
+}) {
+    const { slug } = await params;
     const blogId = slug;
+
+    const headers = { 'Content-Type': 'application/json' };
+
     try {
         // Fetch all data in parallel
         const [postRes, popularRes, latestRes] = await Promise.all([
             fetch(`${api.blog.allBlogs}/${blogId}`, {
                 cache: 'no-store',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
             }),
-            fetch(`${api.blog.popularBlogs}`, {
-                cache: 'no-store',
-                headers: { 'Content-Type': 'application/json' },
-            }),
-            fetch(`${api.blog.allBlogs}?page=1&limit=10`, {
-                cache: 'no-store',
-                headers: { 'Content-Type': 'application/json' },
-            }),
+            fetch(api.blog.popularBlogs, { cache: 'no-store', headers }),
+            fetch(api.blog.latestBlogs, { cache: 'no-store', headers }),
         ]);
 
-        // Check if post exists
         if (!postRes.ok) {
             console.error(`Failed to fetch post: ${postRes.status}`);
             return notFound();
@@ -421,20 +437,17 @@ export default async function BlogPostPage(props: { params: tParams }) {
             return notFound();
         }
 
+        // Safely parse other JSONs
         const [popularJson, latestJson] = await Promise.all([
-            popularRes.json(),
-            latestRes.json(),
+            popularRes.ok ? popularRes.json() : { data: [] },
+            latestRes.ok ? latestRes.json() : { data: [] },
         ]);
-
-        const post: Blog = postJson.data;
-        const popularPosts: Blog[] = popularJson.data || [];
-        const latestPosts: Blog[] = latestJson.data || [];
 
         return (
             <BlogPostComponent
-                post={post}
-                popularPosts={popularPosts}
-                latestPosts={latestPosts}
+                post={postJson.data}
+                popularPosts={popularJson.data || []}
+                latestPosts={latestJson.data || []}
             />
         );
     } catch (error) {

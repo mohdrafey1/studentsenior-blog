@@ -36,6 +36,7 @@ const PopularPosts: React.FC<BlogListProps> = ({ posts }) => {
                                         src={post.banner}
                                         alt={post.title}
                                         fill
+                                        sizes='(max-width: 640px) 6rem, (max-width: 768px) 7rem, 8rem'
                                         className='object-cover'
                                     />
                                 </div>
