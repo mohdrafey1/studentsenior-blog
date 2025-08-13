@@ -26,12 +26,12 @@ export interface BlogPostCardProps {
         description?: string;
         content?: string;
         tags?: string[];
-        author: string;
+        author?: string;
         total_likes?: number;
         total_reads?: number;
         isDraft?: boolean;
-        updatedAt: string;
-        createdAt: string;
+        updatedAt?: string;
+        createdAt?: string;
     };
     isLiked?: boolean;
     onClick?: () => void;

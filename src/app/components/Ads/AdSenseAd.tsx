@@ -13,7 +13,7 @@ export default function AdSenseAd({
     style = { display: 'block', width: '100%' },
     className = '',
 }: Props) {
-    const adRef = useRef<HTMLDivElement>(null);
+    const adRef = useRef<HTMLModElement>(null);
     const pushedRef = useRef(false); // ✅ Track if we already pushed
 
     useEffect(() => {
