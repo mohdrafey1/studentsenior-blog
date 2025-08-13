@@ -107,11 +107,11 @@ function MainContent() {
                         </h2>
 
                         <div className='space-y-6'>
-                            {posts.map((post) => (
+                            {posts.map((post, idx) => (
                                 <BlogPostCard
                                     key={post._id}
-                                    // @ts-expect-error fix type later
                                     post={post}
+                                    priority={idx === 0 && currentPage === 1} // ✅ Only first above-the-fold image
                                     onShare={() => handleShare(post)}
                                     onClick={() => handlePostClick(post.slug)}
                                 />

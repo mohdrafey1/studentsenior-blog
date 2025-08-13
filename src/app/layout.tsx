@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { Poppins, Lora } from 'next/font/google';
-import Script from 'next/script'; // ✅ Import Script component
+import Script from 'next/script';
 import './globals.css';
 
+// ✅ Google Fonts with CSS variable for easy usage
 const poppins = Poppins({
     variable: '--font-poppins',
     subsets: ['latin'],
@@ -15,6 +16,7 @@ const lora = Lora({
     weight: ['400'],
 });
 
+// ✅ Site metadata
 export const metadata: Metadata = {
     title: `SS Blogs${
         process.env.NEXT_PUBLIC_STAGE === 'staging' ? ' [Staging]' : ''
@@ -32,17 +34,25 @@ export default function RootLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+    const isProduction = process.env.NODE_ENV === 'production';
+
     return (
         <html lang='en'>
             <head>
-               <meta name="google-site-verification" content="kFmO-Qmw1qGUJOnPkN1PfNbTa3md37yrz08XxYwuE28" />
-                <Script
-                    id='adsense-script'
-                    async
-                    strategy='afterInteractive'
-                    src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825'
-                    crossOrigin='anonymous'
+                {/* ✅ SEO Verification */}
+                <meta
+                    name='google-site-verification'
+                    content='kFmO-Qmw1qGUJOnPkN1PfNbTa3md37yrz08XxYwuE28'
                 />
+            </head>
+
+            <body
+                suppressHydrationWarning
+                className={`${poppins.variable} ${lora.variable} antialiased`}
+            >
+                {children}
+
+                {/* ✅ Google Analytics - loads after hydration */}
                 <Script
                     id='google-analytics-script'
                     async
@@ -51,15 +61,21 @@ export default function RootLayout({
                 />
                 <Script id='google-analytics' strategy='afterInteractive'>
                     {`window.dataLayer = window.dataLayer || [];
-                    function gtag(){dataLayer.push(arguments);}
-                    gtag('js', new Date());
-                    gtag('config', 'G-3J80PQMG5T');`}
+           function gtag(){dataLayer.push(arguments);}
+           gtag('js', new Date());
+           gtag('config', 'G-3J80PQMG5T');`}
                 </Script>
-            </head>
-            <body
-                className={`${poppins.variable} ${lora.variable} antialiased`}
-            >
-                {children}
+
+                {/* ✅ Google AdSense - only loads in production */}
+                {isProduction && (
+                    <Script
+                        id='adsense-script'
+                        async
+                        strategy='afterInteractive'
+                        src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4435788387381825'
+                        crossOrigin='anonymous'
+                    />
+                )}
             </body>
         </html>
     );
