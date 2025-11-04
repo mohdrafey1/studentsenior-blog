@@ -20,7 +20,8 @@ import {
 } from '@/constant/interface';
 import { Poppins } from 'next/font/google';
 import { formatReadTime, formatDate } from '@/utils/formatting';
-import AdSenseAd from '@/app/components/Ads/AdSenseAd';
+import ClientAd from '@/app/components/Ads/AdsClient';
+import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 
 const poppins = Poppins({
     subsets: ['latin'],
@@ -62,12 +63,29 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                             {...props}
                         />
                     ),
-                    p: ({ ...props }) => (
-                        <p
-                            className='text-base md:text-lg text-neutral-700 leading-relaxed mb-4 md:mb-6 font-normal'
-                            {...props}
-                        />
-                    ),
+                    p: ({ node, ...props }) => {
+                        const hasBlockChild = node?.children?.some(
+                            (child: any) =>
+                                [
+                                    'div',
+                                    'img',
+                                    'pre',
+                                    'iframe',
+                                    'table',
+                                    'blockquote',
+                                ].includes(child?.tagName)
+                        );
+
+                        const Component = hasBlockChild ? 'div' : 'p';
+
+                        return (
+                            <Component
+                                className='text-base md:text-lg text-neutral-700 leading-relaxed mb-4 md:mb-6 font-normal'
+                                {...props}
+                            />
+                        );
+                    },
+
                     a: ({ ...props }) => (
                         <a
                             className='text-blue-600 hover:text-blue-800 font-medium underline underline-offset-4 decoration-blue-300 hover:decoration-blue-500 transition-all duration-200'
@@ -149,11 +167,15 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                         return (
                             <div className='my-6 md:my-8 rounded-xl overflow-hidden shadow-lg border border-neutral-200 group'>
                                 <Image
-                                    src={src}
+                                    src={optimizeCloudinaryUrl(
+                                        src || '',
+                                        'f_auto,q_auto,c_fill,w_400,dpr_auto'
+                                    )}
                                     alt={alt || ''}
                                     width={800}
                                     height={400}
                                     className='w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]'
+                                    unoptimized
                                 />
                                 {alt && (
                                     <div className='bg-neutral-50 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-600 text-center border-t border-neutral-200'>
@@ -297,7 +319,7 @@ function BlogPostComponent({
                                         fill
                                         className='object-cover hover:scale-105 transition-transform duration-700'
                                         sizes='(max-width: 768px) 100vw, 800px'
-                                        priority
+                                        unoptimized
                                     />
                                     <div className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent' />
                                 </div>
@@ -307,7 +329,7 @@ function BlogPostComponent({
                         <div className='px-4 sm:px-6 md:px-10 pb-8 sm:pb-12'>
                             {renderMarkdown(post.content)}
                         </div>
-                        <AdSenseAd adSlot='9984010614' />
+                        <ClientAd adSlot='9984010614' />
 
                         <footer className='px-4 sm:px-6 md:px-10 py-6 sm:py-8 border-t border-neutral-200'>
                             {/* Optional footer content can go here */}
@@ -365,7 +387,7 @@ export async function generateMetadata({ params }: { params: tParams }) {
         }
 
         return {
-            title: `${post.title} | My Blog`,
+            title: `${post.title} | Student Senior Blogs`,
             description:
                 post.description || 'A blog post about interesting topics.',
             keywords: post.tags?.join(', ') || 'blog, article, post',

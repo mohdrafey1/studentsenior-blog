@@ -11,6 +11,7 @@ import { Poppins } from 'next/font/google';
 import { api } from '@/config/apiConfig';
 import { BlogPost } from '@/constant/interface';
 import { formatDate } from '@/utils/formatting';
+import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 
 const poppins = Poppins({
     subsets: ['latin'],
@@ -118,11 +119,15 @@ function SearchResults() {
                         {post.banner && (
                             <div className='relative h-48 w-full overflow-hidden'>
                                 <Image
-                                    src={post.banner}
+                                    src={optimizeCloudinaryUrl(
+                                        post.banner || '',
+                                        'f_auto,q_auto,c_fill,w_300,dpr_auto'
+                                    )}
                                     alt={post.title}
                                     fill
                                     className='object-cover group-hover:scale-105 transition-transform duration-500'
                                     sizes='(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw'
+                                    unoptimized
                                 />
                             </div>
                         )}

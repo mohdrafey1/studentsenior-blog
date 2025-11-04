@@ -5,7 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Lora, Poppins } from 'next/font/google';
 import { BlogListProps } from '@/constant/interface';
-import AdSenseAd from './Ads/AdSenseAd';
+import ClientAd from './Ads/AdsClient';
+import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 
 const lora = Lora({
     subsets: ['latin'],
@@ -33,11 +34,17 @@ const PopularPosts: React.FC<BlogListProps> = ({ posts }) => {
                             {post.banner && (
                                 <div className='relative aspect-[4/3] w-24 sm:w-28 md:w-32 flex-shrink-0 rounded-lg overflow-hidden'>
                                     <Image
-                                        src={post.banner}
+                                        src={optimizeCloudinaryUrl(
+                                            post.banner || '',
+                                            'f_auto,q_auto,c_fill,w_300,dpr_auto'
+                                        )}
                                         alt={post.title}
                                         fill
-                                        sizes='(max-width: 640px) 6rem, (max-width: 768px) 7rem, 8rem'
-                                        className='object-cover'
+                                        sizes='(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
+                                        className='object-cover rounded-lg'
+                                        unoptimized
+                                        loading='lazy'
+                                        decoding='async'
                                     />
                                 </div>
                             )}
@@ -61,7 +68,7 @@ const PopularPosts: React.FC<BlogListProps> = ({ posts }) => {
                     </Link>
                 );
             })}
-            <AdSenseAd adSlot='5797353590' />
+            <ClientAd adSlot='5797353590' />
         </div>
     );
 };
