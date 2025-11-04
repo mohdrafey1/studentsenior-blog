@@ -21,6 +21,7 @@ import {
 import { Poppins } from 'next/font/google';
 import { formatReadTime, formatDate } from '@/utils/formatting';
 import ClientAd from '@/app/components/Ads/AdsClient';
+import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 
 const poppins = Poppins({
     subsets: ['latin'],
@@ -166,7 +167,10 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                         return (
                             <div className='my-6 md:my-8 rounded-xl overflow-hidden shadow-lg border border-neutral-200 group'>
                                 <Image
-                                    src={src}
+                                    src={optimizeCloudinaryUrl(
+                                        src || '',
+                                        'f_auto,q_auto,c_fill,w_400,dpr_auto'
+                                    )}
                                     alt={alt || ''}
                                     width={800}
                                     height={400}

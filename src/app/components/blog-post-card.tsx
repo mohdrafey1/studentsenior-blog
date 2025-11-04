@@ -72,7 +72,10 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
                 {post.banner && (
                     <div className='w-full sm:w-1/3 md:w-2/5 lg:w-1/3 h-48 sm:h-auto relative flex-shrink-0'>
                         <img
-                            src={optimizeCloudinaryUrl(post.banner)}
+                            src={optimizeCloudinaryUrl(
+                                post.banner || '',
+                                'f_auto,q_auto,c_fill,w_400,dpr_auto'
+                            )}
                             alt={`Cover image for ${post.title}`}
                             className='object-cover w-full h-full'
                             loading={priority ? 'eager' : 'lazy'}
