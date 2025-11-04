@@ -18,7 +18,7 @@ const lora = Lora({
 
 // ✅ Site metadata
 export const metadata: Metadata = {
-    title: `SS Blogs${
+    title: `Student Senior Blogs${
         process.env.NEXT_PUBLIC_STAGE === 'staging' ? ' [Staging]' : ''
     }`,
     description:

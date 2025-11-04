@@ -387,7 +387,7 @@ export async function generateMetadata({ params }: { params: tParams }) {
         }
 
         return {
-            title: `${post.title} | My Blog`,
+            title: `${post.title} | Student Senior Blogs`,
             description:
                 post.description || 'A blog post about interesting topics.',
             keywords: post.tags?.join(', ') || 'blog, article, post',
