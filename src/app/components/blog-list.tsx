@@ -14,11 +14,11 @@ export default function BlogPostList({
     const router = useRouter();
 
     const handlePostClick = (slug: string) => {
-        router.push(`/blog/post/${slug}`);
+        router.push(`/${slug}`);
     };
 
     const handleShare = (post: BlogPost) => {
-        const postUrl = `${window.location.origin}/blog/post/${post.slug}`;
+        const postUrl = `${window.location.origin}/${post.slug}`;
         navigator.clipboard.writeText(postUrl);
         if (navigator.share) {
             navigator.share({

@@ -8,7 +8,7 @@ export async function GET() {
 
     try {
         const res = await fetch(
-            'https://stagingblogapi.studentsenior.com/v1/sitemap',
+            'https://blogapi.studentsenior.com/v1/sitemap',
             {
                 cache: 'no-store', // 🔥 ensures fetch is not cached
             }
@@ -20,7 +20,7 @@ export async function GET() {
             .map(
                 (post: Slug) => `
       <url>
-        <loc>${baseUrl}/blog/post/${post}</loc>
+        <loc>${baseUrl}/${post}</loc>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>
       </url>`

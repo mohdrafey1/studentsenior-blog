@@ -148,7 +148,7 @@ export default async function HomePage({
                                 {category.map((item, index) => (
                                     <Link
                                         key={index}
-                                        href={`/blog/search?q=${encodeURIComponent(
+                                        href={`/search?q=${encodeURIComponent(
                                             item
                                         )}`}
                                         className={`${poppins.className} group relative bg-stone-100 text-gray-800 font-medium px-5 py-2 rounded-full shadow-sm hover:bg-blue-500 hover:text-white transition-all duration-300`}
