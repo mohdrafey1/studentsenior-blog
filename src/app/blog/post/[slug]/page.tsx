@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, User, Clock, Copy } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Clock } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -23,6 +23,7 @@ import { formatReadTime, formatDate } from '@/utils/formatting';
 import ClientAd from '@/app/components/Ads/AdsClient';
 import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 import CopyButton from '@/app/components/copy-button';
+import type { Element, ElementContent } from 'hast';
 
 const poppins = Poppins({
     subsets: ['latin'],
@@ -65,8 +66,11 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                         />
                     ),
                     p: ({ node, ...props }) => {
-                        const hasBlockChild = node?.children?.some(
-                            (child: any) =>
+                        const hasBlockChild = (
+                            node?.children as ElementContent[]
+                        )?.some(
+                            (child): child is Element =>
+                                'tagName' in child &&
                                 [
                                     'div',
                                     'img',
@@ -74,7 +78,7 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                                     'iframe',
                                     'table',
                                     'blockquote',
-                                ].includes(child?.tagName)
+                                ].includes(child.tagName)
                         );
 
                         const Component = hasBlockChild ? 'div' : 'p';

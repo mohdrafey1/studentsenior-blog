@@ -1,12 +1,11 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { Share2, User, Clock } from 'lucide-react';
 import { Poppins, Inter } from 'next/font/google';
 import { formatDate, getReadTime } from '@/utils/formatting';
 import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
-import Link from 'next/link';
+import Image from 'next/image';
 
 const poppins = Poppins({
     subsets: ['latin'],
@@ -71,7 +70,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
         >
             {post.banner && (
                 <div className='w-full sm:w-1/3 md:w-2/5 lg:w-1/3 h-48 sm:h-auto relative flex-shrink-0'>
-                    <img
+                    <Image
                         src={optimizeCloudinaryUrl(
                             post.banner || '',
                             'f_auto,q_auto,c_fill,w_400,dpr_auto'
@@ -81,6 +80,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
                         loading={priority ? 'eager' : 'lazy'}
                         sizes='(max-width: 640px) 100vw, (max-width: 768px) 40vw, (max-width: 1024px) 30vw, 25vw'
                         decoding='async'
+                        unoptimized
                     />
                 </div>
             )}

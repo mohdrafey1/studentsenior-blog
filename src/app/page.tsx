@@ -37,12 +37,15 @@ async function getData(page: number, limit: number) {
     }
 }
 
+interface PageProps {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+}
+
 export default async function HomePage({
     searchParams,
-}: {
-    searchParams: { page?: string };
-}) {
-    const currentPage = Number(searchParams.page) || 1;
+}: PageProps): Promise<React.ReactElement> {
+    const resolvedParams = await searchParams;
+    const currentPage = Number(resolvedParams.page) || 1;
     const postsPerPage = 10;
 
     const { posts, total, popular } = await getData(currentPage, postsPerPage);
