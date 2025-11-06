@@ -134,12 +134,13 @@ export default async function HomePage({
                     {/* Sidebar */}
                     <aside className='w-full space-y-8'>
                         {/* Categories */}
-                        <section>
+                        <section className='py-10'>
                             <h3
-                                className={`${poppins.className} text-xl font-semibold mb-4`}
+                                className={`${poppins.className} text-2xl font-semibold mb-6 text-gray-900 text-center lg:text-left`}
                             >
-                                Stories from all interests
+                                Stories from All Interests
                             </h3>
+
                             <div className='flex flex-wrap gap-3 justify-center lg:justify-start'>
                                 {category.map((item, index) => (
                                     <Link
@@ -147,9 +148,13 @@ export default async function HomePage({
                                         href={`/blog/search?q=${encodeURIComponent(
                                             item
                                         )}`}
-                                        className={`${poppins.className} bg-stone-100 text-gray-800 shadow-md px-4 py-2 rounded-full cursor-pointer capitalize hover:bg-stone-200 transition`}
+                                        className={`${poppins.className} group relative bg-stone-100 text-gray-800 font-medium px-5 py-2 rounded-full shadow-sm hover:bg-blue-500 hover:text-white transition-all duration-300`}
                                     >
-                                        {item}
+                                        <span className='relative z-10 capitalize'>
+                                            {item}
+                                        </span>
+                                        {/* Subtle hover glow effect */}
+                                        <span className='absolute inset-0 rounded-full bg-orange-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300'></span>
                                     </Link>
                                 ))}
                             </div>
