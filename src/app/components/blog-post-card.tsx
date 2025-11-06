@@ -75,6 +75,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
                             post.banner || '',
                             'f_auto,q_auto,c_fill,w_400,dpr_auto'
                         )}
+                        fill
                         alt={`Cover image for ${post.title}`}
                         className='object-cover w-full h-full'
                         loading={priority ? 'eager' : 'lazy'}
