@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { Poppins, Lora } from 'next/font/google';
 import Script from 'next/script';
+import AdBlockGuard from './components/AdBlockGuard/AdBlockGuard';
 import './globals.css';
 
-// ✅ Google Fonts with CSS variable for easy usage
+// ✅ Google Fonts with CSS variable
 const poppins = Poppins({
     variable: '--font-poppins',
     subsets: ['latin'],
@@ -16,7 +17,7 @@ const lora = Lora({
     weight: ['400'],
 });
 
-// ✅ Site metadata
+// ✅ Metadata
 export const metadata: Metadata = {
     title: `Student Senior Blogs${
         process.env.NEXT_PUBLIC_STAGE === 'staging' ? ' [Staging]' : ''
@@ -31,28 +32,25 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
     children,
-}: Readonly<{
-    children: React.ReactNode;
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
     const isProduction = process.env.NODE_ENV === 'production';
 
     return (
         <html lang='en'>
             <head>
-                {/* ✅ SEO Verification */}
                 <meta
                     name='google-site-verification'
                     content='kFmO-Qmw1qGUJOnPkN1PfNbTa3md37yrz08XxYwuE28'
                 />
             </head>
-
             <body
                 suppressHydrationWarning
                 className={`${poppins.variable} ${lora.variable} antialiased`}
             >
-                {children}
+                {/* ✅ AdBlockGuard runs on client side only */}
+                <AdBlockGuard>{children}</AdBlockGuard>
 
-                {/* ✅ Google Analytics - loads after hydration */}
+                {/* ✅ Google Analytics */}
                 <Script
                     id='google-analytics-script'
                     async
@@ -61,12 +59,12 @@ export default function RootLayout({
                 />
                 <Script id='google-analytics' strategy='afterInteractive'>
                     {`window.dataLayer = window.dataLayer || [];
-           function gtag(){dataLayer.push(arguments);}
-           gtag('js', new Date());
-           gtag('config', 'G-3J80PQMG5T');`}
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-3J80PQMG5T');`}
                 </Script>
 
-                {/* ✅ Google AdSense - only loads in production */}
+                {/* ✅ AdSense only in production */}
                 {isProduction && (
                     <Script
                         id='adsense-script'
