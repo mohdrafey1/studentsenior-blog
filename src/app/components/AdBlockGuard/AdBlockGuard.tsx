@@ -29,13 +29,13 @@ export default function AdBlockGuard({
         detectAdBlock();
     }, []);
 
-    if (!isLoaded) {
-        return (
-            <div className='min-h-screen flex items-center justify-center bg-gray-900 text-white text-xl'>
-                Checking for AdBlock...
-            </div>
-        );
-    }
+    // if (!isLoaded) {
+    //     return (
+    //         <div className='min-h-screen flex items-center justify-center bg-gray-900 text-white text-xl'>
+    //             Checking for AdBlock...
+    //         </div>
+    //     );
+    // }
 
     if (adBlockDetected) {
         return (
