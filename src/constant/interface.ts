@@ -15,8 +15,11 @@ export interface Blog {
     isDraft?: boolean;
     tags?: string[];
     total_likes?: number;
+    summary?: SummaryItem[];
 }
-
+export type SummaryItem = {
+    summary: string;
+};
 export interface BlogPostComponentProps {
     post: Blog;
     popularPosts: Blog[];

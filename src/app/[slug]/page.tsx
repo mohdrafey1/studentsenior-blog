@@ -24,6 +24,7 @@ import ClientAd from '@/app/components/Ads/AdsClient';
 import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 import CopyButton from '@/app/components/copy-button';
 import type { Element, ElementContent } from 'hast';
+import AiSummary from '../components/AiSummary/AiSummary';
 
 const poppins = Poppins({
     subsets: ['latin'],
@@ -333,6 +334,10 @@ function BlogPostComponent({
                                 </div>
                             )}
                         </header>
+
+                        {post?.summary && (
+                            <AiSummary summaries={post?.summary} />
+                        )}
 
                         <div className='px-4 sm:px-6 md:px-10 pb-8 sm:pb-12'>
                             {renderMarkdown(post.content)}
