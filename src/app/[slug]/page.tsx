@@ -1,4 +1,4 @@
-import { ArrowLeft, Calendar, User, Clock, Copy } from 'lucide-react';
+import { ArrowLeft, Calendar, User, Clock } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -22,6 +22,8 @@ import { Poppins } from 'next/font/google';
 import { formatReadTime, formatDate } from '@/utils/formatting';
 import ClientAd from '@/app/components/Ads/AdsClient';
 import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
+import CopyButton from '@/app/components/copy-button';
+import type { Element, ElementContent } from 'hast';
 
 const poppins = Poppins({
     subsets: ['latin'],
@@ -64,8 +66,11 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                         />
                     ),
                     p: ({ node, ...props }) => {
-                        const hasBlockChild = node?.children?.some(
-                            (child: any) =>
+                        const hasBlockChild = (
+                            node?.children as ElementContent[]
+                        )?.some(
+                            (child): child is Element =>
+                                'tagName' in child &&
                                 [
                                     'div',
                                     'img',
@@ -73,7 +78,7 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                                     'iframe',
                                     'table',
                                     'blockquote',
-                                ].includes(child?.tagName)
+                                ].includes(child.tagName)
                         );
 
                         const Component = hasBlockChild ? 'div' : 'p';
@@ -137,9 +142,12 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                             <div className='rounded-lg overflow-hidden my-4 md:my-6 group'>
                                 <div className='flex items-center justify-between bg-neutral-800 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-200'>
                                     <span>{match?.[1] || 'code'}</span>
-                                    <button className='opacity-0 group-hover:opacity-100 transition-opacity text-neutral-400 hover:text-white'>
-                                        <Copy className='w-3 h-3 md:w-4 md:h-4' />
-                                    </button>
+                                    <CopyButton
+                                        textToCopy={String(children).replace(
+                                            /\n$/,
+                                            ''
+                                        )}
+                                    />
                                 </div>
                                 <SyntaxHighlighter
                                     // @ts-expect-error - atomDark type is not properly exported

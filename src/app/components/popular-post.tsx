@@ -27,7 +27,7 @@ const PopularPosts: React.FC<BlogListProps> = ({ posts }) => {
                 return (
                     <Link
                         key={post._id}
-                        href={`/blog/post/${post.slug}`}
+                        href={`/${post.slug}`}
                         className='block'
                     >
                         <article className='flex items-start gap-3 w-full border border-neutral-200 bg-white rounded-xl shadow-sm hover:shadow-md transition-all p-2'>
