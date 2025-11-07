@@ -8,7 +8,6 @@ export default function AdBlockGuard({
     children: React.ReactNode;
 }) {
     const [adBlockDetected, setAdBlockDetected] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -17,12 +16,11 @@ export default function AdBlockGuard({
             try {
                 DetectAdblock((enabled: boolean) => {
                     setAdBlockDetected(enabled);
-                    setIsLoaded(true);
                 });
             } catch (err) {
                 // If detection fails, assume AdBlock is present (safe fallback)
+                console.log(err);
                 setAdBlockDetected(true);
-                setIsLoaded(true);
             }
         };
 
