@@ -112,6 +112,7 @@ function SearchResults() {
             <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
                 {searchResults.map((post) => (
                     <Link
+                        prefetch={false}
                         key={post._id}
                         href={`/blog/post/${post.slug}`}
                         className='group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300'
