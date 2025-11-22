@@ -378,7 +378,7 @@ export async function generateMetadata({ params }: { params: tParams }) {
 
     try {
         const postRes = await fetch(`${api.blog.allBlogs}/${blogId}`, {
-            cache: 'no-store',
+            next: { revalidate: 3600 },
             headers: { 'Content-Type': 'application/json' },
         });
 
@@ -454,11 +454,17 @@ export default async function BlogPostPage({
         // Fetch all data in parallel
         const [postRes, popularRes, latestRes] = await Promise.all([
             fetch(`${api.blog.allBlogs}/${blogId}`, {
-                cache: 'no-store',
+                next: { revalidate: 3600 },
                 headers,
             }),
-            fetch(api.blog.popularBlogs, { cache: 'no-store', headers }),
-            fetch(api.blog.latestBlogs, { cache: 'no-store', headers }),
+            fetch(api.blog.popularBlogs, {
+                next: { revalidate: 3600 },
+                headers,
+            }),
+            fetch(api.blog.latestBlogs, {
+                next: { revalidate: 3600 },
+                headers,
+            }),
         ]);
 
         if (!postRes.ok) {
