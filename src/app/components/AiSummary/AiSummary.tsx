@@ -2,12 +2,8 @@
 import React, { useState } from 'react';
 import { Sparkles, RefreshCw } from 'lucide-react';
 
-interface SummaryObject {
-    summary: string;
-}
-
 interface AiSummaryProps {
-    summaries: SummaryObject[];
+    summaries: string[][];
 }
 
 const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
@@ -17,7 +13,7 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
     const [typing, setTyping] = useState(false);
     const [aiTyping, setAiTyping] = useState(false);
 
-    // ✍️ Typing animation (logic unchanged)
+    // Typing animation
     const typeText = (text: string) => {
         setDisplayText('');
         setTyping(true);
@@ -25,20 +21,22 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
 
         let index = 0;
         const typingSpeed = 25;
-        const typingInterval = setInterval(() => {
-            setDisplayText((prev) => prev + text.charAt(index));
+
+        const interval = setInterval(() => {
+            setDisplayText((prev) => prev + text.charAt(index - 1));
             index++;
+
             if (index === text.length) {
-                clearInterval(typingInterval);
+                clearInterval(interval);
                 setTyping(false);
                 setTimeout(() => setAiTyping(false), 600);
             }
         }, typingSpeed);
     };
 
-    // ⚙️ Simulate AI generation (logic unchanged)
+    // Generate summary
     const handleGenerate = () => {
-        if (summaries.length === 0) return;
+        if (!summaries.length) return;
 
         setStarted(true);
         setLoading(true);
@@ -50,150 +48,153 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
 
         setTimeout(() => {
             const randomIndex = Math.floor(Math.random() * summaries.length);
-            const newSummary = summaries[randomIndex].summary;
+
+            // FIXED — summaries[randomIndex] is already an array of strings
+            const selectedSummaryArray = summaries[randomIndex];
+
+            // Convert string[] → single string (with line breaks)
+            const newSummary = selectedSummaryArray.join('\n');
+
             setLoading(false);
             typeText(newSummary);
         }, delay);
     };
 
     return (
-        <div className='max-w-7xl lg:mx-9 mx-auto p-5 bg-white border border-gray-200 rounded-2xl shadow-lg shadow-gray-900/5 my-8 transition-all duration-300'>
-            {/* Header */}
-            <div className='flex items-center justify-between mb-0'>
-                <h3 className='text-lg flex items-center justify-center content-center font-semibold gap-2 text-slate-800'>
-                    <span className='inline-block animate-bounce'>
-                        <Sparkles className='w-5 h-5 text-purple-500 bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text' />
-                    </span>
-                    AI Blog Summary
-                </h3>
-
-                <button
-                    onClick={handleGenerate}
-                    disabled={loading || typing}
-                    className='text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white flex items-center gap-2 px-4 py-2 rounded-md shadow-lg shadow-indigo-500/20 transform hover:scale-105 active:scale-95 transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed'
-                >
-                    {loading && (
-                        <RefreshCw
-                            className={`w-4 h-4 ${
-                                loading ? 'animate-spin' : ''
-                            }`}
-                        />
-                    )}
-                    {!loading ? (
-                        <Sparkles className='w-5 h-5 text-white bg-clip-text' />
-                    ) : (
-                        ''
-                    )}
-                    {started ? 'Regenerate' : 'Generate'}
-                </button>
-            </div>
-
-            {/* Display Area */}
-            <div className='relative flex items-center justify-center'>
-                {!started ? (
-                    <div className='flex flex-col items-center justify-center text-center text-slate-400 w-full animate-fadeIn'>
-                        {/* <Sparkles className='w-10 h-10 text-gray-300 mb-1' />
-                        <p className='font-medium text-sm'>
-                            Click "Generate" to see the magic
-                        </p> */}
+        <div className='relative mx-3 sm:mx-6 md:mx-10 my-4 rounded-2xl bg-blue-100'>
+            <div className='rounded-t-2xl p-4 sm:p-5 md:p-6'>
+                <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-3'>
+                    <div className='flex items-center gap-1'>
+                        <Sparkles className='w-5 h-5 text-blue-600 pl-4 pr-4' />
+                        <h3 className='text-[17px] sm:text-[18px] font-semibold text-gray-800 tracking-tight'>
+                            AI Summary
+                        </h3>
                     </div>
-                ) : loading ? (
-                    <div className='flex items-center justify-center h-20 text-lg font-medium gap-2'>
-                        <p className='animate-shimmer bg-gradient-to-r from-slate-700 via-slate-500 to-slate-700 bg-[length:200%_100%] bg-clip-text text-transparent'>
-                            AI is generating summary...
-                        </p>
-                    </div>
-                ) : displayText ? (
-                    <div className='animate-fadeIn w-full'>
-                        {/* This class handles newlines (\n) in your summary string */}
-                        <p
-                            className={`text-slate-700 leading-relaxed whitespace-pre-line`}
+
+                    {!started && (
+                        <button
+                            onClick={handleGenerate}
+                            disabled={loading || typing}
+                            className='text-sm font-medium bg-blue-600 hover:bg-blue-700 transition-all text-white flex items-center gap-2 px-4 py-1.5 rounded-md shadow disabled:opacity-50 w-full sm:w-auto justify-center'
                         >
-                            {displayText}
-                            {aiTyping && (
-                                <span className='ml-1 animate-blink bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent'>
-                                    █
-                                </span>
+                            {loading ? (
+                                <RefreshCw className='w-4 h-4 animate-spin' />
+                            ) : (
+                                <Sparkles className='w-4 h-4' />
                             )}
-                        </p>
-                        {aiTyping && (
-                            <div className='flex items-center gap-2 mt-3 text-sm text-indigo-600'>
-                                <span className='relative flex h-2 w-2'>
-                                    <span className='animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75'></span>
-                                    <span className='relative inline-flex rounded-full h-2 w-2 bg-indigo-500'></span>
+                            Generate
+                        </button>
+                    )}
+
+                    {loading && (
+                        <div className='-mt-3'>
+                            <svg
+                                width='40'
+                                height='40'
+                                viewBox='0 0 80 80'
+                                xmlns='http://www.w3.org/2000/svg'
+                            >
+                                <defs>
+                                    <linearGradient
+                                        id='spark'
+                                        x1='0%'
+                                        y1='0%'
+                                        x2='100%'
+                                        y2='100%'
+                                    >
+                                        <stop
+                                            offset='0%'
+                                            stop-color='#8B5CF6'
+                                        />
+                                        <stop
+                                            offset='50%'
+                                            stop-color='#A855F7'
+                                        />
+                                        <stop
+                                            offset='100%'
+                                            stop-color='#FB7185'
+                                        />
+                                    </linearGradient>
+                                </defs>
+
+                                <g transform='translate(32 25)'>
+                                    <path
+                                        fill='url(#spark)'
+                                        d='M14 0c1.5 7 6 12 13 14-7 2-12 6-14 13-2-7-7-12-13-14 7-2 12-7 14-13z'
+                                    >
+                                        <animateTransform
+                                            attributeName='transform'
+                                            type='scale'
+                                            values='1;1.18;1'
+                                            dur='1.8s'
+                                            repeatCount='indefinite'
+                                        />
+                                    </path>
+                                </g>
+
+                                <g transform='translate(10 10) scale(0.7)'>
+                                    <path
+                                        fill='url(#spark)'
+                                        d='M12 0c1 6 5 10 10 11-6 1-10 5-11 10-1-6-5-10-10-11 6-1 10-5 11-10z'
+                                    >
+                                        <animateTransform
+                                            attributeName='transform'
+                                            type='translate'
+                                            values='0 -2;0 2;0 -2'
+                                            dur='2s'
+                                            repeatCount='indefinite'
+                                        />
+                                    </path>
+                                </g>
+
+                                <g transform='translate(55 12) scale(0.55)'>
+                                    <path
+                                        fill='url(#spark)'
+                                        d='M10 0c1 5 4 9 9 10-5 1-9 4-10 9-1-5-4-9-9-10 5-1 9-4 10-9z'
+                                    >
+                                        <animateTransform
+                                            attributeName='transform'
+                                            type='translate'
+                                            values='0 -1.5;0 1.5;0 -1.5'
+                                            dur='1.6s'
+                                            repeatCount='indefinite'
+                                        />
+                                    </path>
+                                </g>
+                            </svg>
+                        </div>
+                    )}
+                </div>
+
+                {/* Summary List */}
+                {displayText ? (
+                    <ul className='space-y-3 text-[14px] sm:text-[15px] text-gray-700'>
+                        {displayText.split('\n').map((line, i) => (
+                            <li
+                                key={i}
+                                className='flex items-start gap-2 sm:gap-3 border-l-0 border-purple-300 pl-2 sm:pl-3 py-0.5'
+                            >
+                                <span className='block h-2 w-2 mt-1 rounded-full bg-purple-500'></span>
+                                <span className='leading-relaxed break-words'>
+                                    {line}
+                                    {aiTyping &&
+                                        i ===
+                                            displayText.split('\n').length -
+                                                1 && (
+                                            <span className='ml-1 animate-pulse text-purple-600'>
+                                                █
+                                            </span>
+                                        )}
                                 </span>
-                                Generating ...
-                            </div>
-                        )}
-                    </div>
+                            </li>
+                        ))}
+                    </ul>
                 ) : (
-                    <p className='text-slate-400'>No summary generated yet.</p>
+                    <p className='text-gray-400 text-sm sm:text-[15px]'>
+                        Tap Generate and let AI do the magic
+                    </p>
                 )}
             </div>
-
-            {/* ✨ Custom Aesthetics & Animations (Unchanged from previous) */}
-            <style jsx>{`
-                /* Blinking cursor */
-                @keyframes blink {
-                    0%,
-                    100% {
-                        opacity: 1;
-                    }
-                    50% {
-                        opacity: 0;
-                    }
-                }
-                .animate-blink {
-                    animation: blink 0.8s infinite steps(1, start);
-                }
-
-                /* Text fade-in */
-                @keyframes fadeIn {
-                    from {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-                .animate-fadeIn {
-                    animation: fadeIn 0.5s ease-out forwards;
-                }
-
-                /* AI Loading Shimmer */
-                @keyframes shimmer {
-                    0% {
-                        background-position: 200% 0;
-                    }
-                    100% {
-                        background-position: -200% 0;
-                    }
-                }
-                .animate-shimmer {
-                    animation: shimmer 2s linear infinite;
-                }
-
-                /* Header Icon Sparkle */
-                @keyframes sparkle-spin {
-                    0% {
-                        transform: scale(1) rotate(0deg);
-                        opacity: 0.8;
-                    }
-                    50% {
-                        transform: scale(1.3) rotate(45deg);
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: scale(1) rotate(0deg);
-                        opacity: 0.8;
-                    }
-                }
-                .animate-sparkle-spin {
-                    animation: sparkle-spin 2.5s ease-in-out infinite;
-                }
-            `}</style>
         </div>
     );
 };

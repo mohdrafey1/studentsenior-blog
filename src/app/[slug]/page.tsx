@@ -31,6 +31,7 @@ const poppins = Poppins({
     weight: ['400', '600'],
     preload: true,
 });
+let first = true;
 
 function renderMarkdown(content: string = ''): React.ReactElement {
     if (!content.trim()) {
@@ -42,6 +43,11 @@ function renderMarkdown(content: string = ''): React.ReactElement {
             </div>
         );
     }
+    const renderAdOnce = () => {
+        if (!first) return null;
+        first = false;
+        return <ClientAd adSlot='9984010614' />;
+    };
 
     return (
         <div className='max-w-none text-neutral-800'>
@@ -195,12 +201,15 @@ function renderMarkdown(content: string = ''): React.ReactElement {
                         );
                     },
                     table: ({ ...props }) => (
-                        <div className='overflow-x-auto my-4 md:my-6 rounded-lg border border-neutral-200 shadow-sm'>
-                            <table
-                                className='min-w-full divide-y divide-neutral-200'
-                                {...props}
-                            />
-                        </div>
+                        <>
+                            <div className='overflow-x-auto my-4 md:my-6 rounded-lg border border-neutral-200 shadow-sm'>
+                                <table
+                                    className='min-w-full divide-y divide-neutral-200'
+                                    {...props}
+                                />
+                            </div>
+                            {renderAdOnce()}
+                        </>
                     ),
                     th: ({ ...props }) => (
                         <th
@@ -261,7 +270,6 @@ function BlogPostComponent({
                                 </span>
                             </Link>
                         </div>
-
                         <header className='px-4 sm:px-6 md:px-8 lg:px-10 pb-0 text-neutral-800'>
                             {/* Title */}
                             <h1 className='text-2xl sm:text-3xl md:text-4xl font-semibold leading-tight tracking-tight font-serif mb-3 text-neutral-900'>
@@ -334,16 +342,14 @@ function BlogPostComponent({
                                 </div>
                             )}
                         </header>
-
                         {post?.summary && (
                             <AiSummary summaries={post?.summary} />
                         )}
-
+                        <ClientAd adSlot='9984010614' />
                         <div className='px-4 sm:px-6 md:px-10 pb-8 sm:pb-12'>
                             {renderMarkdown(post.content)}
                         </div>
                         <ClientAd adSlot='9984010614' />
-
                         <footer className='px-4 sm:px-6 md:px-10 py-6 sm:py-8 border-t border-neutral-200'>
                             {/* Optional footer content can go here */}
                         </footer>
