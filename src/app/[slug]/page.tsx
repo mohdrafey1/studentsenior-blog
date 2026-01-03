@@ -18,7 +18,6 @@ import {
     Blog,
     CodeProps,
 } from '@/constant/interface';
-import { Poppins } from 'next/font/google';
 import { formatReadTime, formatDate } from '@/utils/formatting';
 import ClientAd from '@/app/components/Ads/AdsClient';
 import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
@@ -26,232 +25,226 @@ import CopyButton from '@/app/components/copy-button';
 import type { Element, ElementContent } from 'hast';
 import AiSummary from '../components/AiSummary/AiSummary';
 
-const poppins = Poppins({
-    subsets: ['latin'],
-    weight: ['400', '600'],
-    preload: true,
-});
-let first = true;
-
-function renderMarkdown(content: string = ''): React.ReactElement {
-    if (!content.trim()) {
-        return (
-            <div className='max-w-none'>
-                <p className='text-neutral-500 italic font-light'>
-                    No content available.
-                </p>
-            </div>
-        );
-    }
-    const renderAdOnce = () => {
-        if (!first) return null;
-        first = false;
-        return <ClientAd adSlot='9984010614' />;
-    };
-
-    return (
-        <div className='max-w-none text-neutral-800'>
-            <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                    h1: ({ ...props }) => (
-                        <h1
-                            className='text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-8 md:mt-12 mb-6 md:mb-8 leading-tight'
-                            {...props}
-                        />
-                    ),
-                    h2: ({ ...props }) => (
-                        <h2
-                            className="text-2xl md:text-3xl font-bold text-neutral-900 mt-8 md:mt-10 mb-4 md:mb-6 leading-tight relative after:content-[''] after:absolute after:bottom-[-8px] after:left-0 after:w-16 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500"
-                            {...props}
-                        />
-                    ),
-                    h3: ({ ...props }) => (
-                        <h3
-                            className="text-xl md:text-2xl font-semibold text-neutral-800 mt-6 md:mt-8 mb-3 md:mb-4 leading-tight flex items-center before:content-['#'] before:text-blue-500 before:mr-2 before:text-lg md:before:text-xl"
-                            {...props}
-                        />
-                    ),
-                    p: ({ node, ...props }) => {
-                        const hasBlockChild = (
-                            node?.children as ElementContent[]
-                        )?.some(
-                            (child): child is Element =>
-                                'tagName' in child &&
-                                [
-                                    'div',
-                                    'img',
-                                    'pre',
-                                    'iframe',
-                                    'table',
-                                    'blockquote',
-                                ].includes(child.tagName)
-                        );
-
-                        const Component = hasBlockChild ? 'div' : 'p';
-
-                        return (
-                            <Component
-                                className='text-base md:text-lg text-neutral-700 leading-relaxed mb-4 md:mb-6 font-normal'
-                                {...props}
-                            />
-                        );
-                    },
-
-                    a: ({ ...props }) => (
-                        <a
-                            className='text-blue-600 hover:text-blue-800 font-medium underline underline-offset-4 decoration-blue-300 hover:decoration-blue-500 transition-all duration-200'
-                            target='_blank'
-                            rel='noopener noreferrer'
-                            {...props}
-                        />
-                    ),
-                    ul: ({ ...props }) => (
-                        <ul
-                            className='list-disc pl-5 md:pl-6 mb-4 md:mb-6 space-y-2 md:space-y-3 marker:text-blue-400'
-                            {...props}
-                        />
-                    ),
-                    ol: ({ ...props }) => (
-                        <ol
-                            className='list-decimal pl-5 md:pl-6 mb-4 md:mb-6 space-y-2 md:space-y-3 marker:font-medium marker:text-blue-500'
-                            {...props}
-                        />
-                    ),
-                    li: ({ ...props }) => (
-                        <li
-                            className='text-base md:text-lg text-neutral-700 leading-relaxed pl-1 md:pl-2 marker:font-medium'
-                            {...props}
-                        />
-                    ),
-                    blockquote: ({ ...props }) => (
-                        <blockquote
-                            className='border-l-4 border-blue-400 pl-4 md:pl-6 italic text-neutral-600 my-4 md:my-6 py-1 md:py-2 bg-blue-50 rounded-r-lg'
-                            {...props}
-                        />
-                    ),
-                    code({ className, children, ...props }: CodeProps) {
-                        const match = /language-(\w+)/.exec(className || '');
-                        const isInline = !className;
-
-                        if (isInline) {
-                            return (
-                                <code
-                                    className='inline bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-mono text-sm border border-red-300'
-                                    {...props}
-                                >
-                                    {String(children).trim()}
-                                </code>
-                            );
-                        }
-
-                        return (
-                            <div className='rounded-lg overflow-hidden my-4 md:my-6 group'>
-                                <div className='flex items-center justify-between bg-neutral-800 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-200'>
-                                    <span>{match?.[1] || 'code'}</span>
-                                    <CopyButton
-                                        textToCopy={String(children).replace(
-                                            /\n$/,
-                                            ''
-                                        )}
-                                    />
-                                </div>
-                                <SyntaxHighlighter
-                                    // @ts-expect-error - atomDark type is not properly exported
-                                    style={atomDark}
-                                    language={match?.[1] || 'text'}
-                                    PreTag='div'
-                                    className='!bg-neutral-900 !rounded-b-lg !p-3 md:!p-4 text-xs md:text-sm !m-0'
-                                    showLineNumbers
-                                    {...props}
-                                >
-                                    {String(children).replace(/\n$/, '')}
-                                </SyntaxHighlighter>
-                            </div>
-                        );
-                    },
-                    hr: ({ ...props }) => (
-                        <hr
-                            className='my-6 md:my-8 h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent border-0'
-                            {...props}
-                        />
-                    ),
-                    img: ({ src, alt }) => {
-                        if (!src || typeof src !== 'string') return null;
-
-                        return (
-                            <div className='my-6 md:my-8 rounded-xl overflow-hidden shadow-lg border border-neutral-200 group'>
-                                <Image
-                                    src={optimizeCloudinaryUrl(
-                                        src || '',
-                                        'f_auto,q_auto,c_fill,w_400,dpr_auto'
-                                    )}
-                                    alt={alt || ''}
-                                    width={800}
-                                    height={400}
-                                    className='w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]'
-                                    unoptimized
-                                />
-                                {alt && (
-                                    <div className='bg-neutral-50 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-600 text-center border-t border-neutral-200'>
-                                        {alt}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    },
-                    table: ({ ...props }) => (
-                        <>
-                            <div className='overflow-x-auto my-4 md:my-6 rounded-lg border border-neutral-200 shadow-sm'>
-                                <table
-                                    className='min-w-full divide-y divide-neutral-200'
-                                    {...props}
-                                />
-                            </div>
-                            {renderAdOnce()}
-                        </>
-                    ),
-                    th: ({ ...props }) => (
-                        <th
-                            className='px-3 md:px-4 py-2 md:py-3 bg-neutral-50 text-left text-xs md:text-sm font-semibold text-neutral-700 uppercase tracking-wider border-b border-neutral-200'
-                            {...props}
-                        />
-                    ),
-                    td: ({ ...props }) => (
-                        <td
-                            className='px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm text-neutral-700 border-b border-neutral-200'
-                            {...props}
-                        />
-                    ),
-                    tr: ({ ...props }) => (
-                        <tr
-                            className='hover:bg-neutral-50 transition-colors'
-                            {...props}
-                        />
-                    ),
-                    strong: ({ ...props }) => (
-                        <strong
-                            className='font-semibold text-neutral-900'
-                            {...props}
-                        />
-                    ),
-                    em: ({ ...props }) => (
-                        <em className='italic text-blue-600' {...props} />
-                    ),
-                }}
-            >
-                {content}
-            </ReactMarkdown>
-        </div>
-    );
-}
-
 function BlogPostComponent({
     post,
     popularPosts,
     latestPosts,
 }: BlogPostComponentProps): React.ReactElement {
     const readTime = formatReadTime(post.content);
+
+    let firstAdRendered = false;
+    const renderMarkdown = (content: string = '') => {
+        if (!content.trim()) {
+            return (
+                <div className='max-w-none'>
+                    <p className='text-neutral-500 italic font-light'>
+                        No content available.
+                    </p>
+                </div>
+            );
+        }
+
+        return (
+            <div className='max-w-none text-neutral-800'>
+                <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                        h1: ({ ...props }) => (
+                            <h1
+                                className='text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mt-8 md:mt-12 mb-6 md:mb-8 leading-tight'
+                                {...props}
+                            />
+                        ),
+                        h2: ({ ...props }) => (
+                            <h2
+                                className="text-2xl md:text-3xl font-bold text-neutral-900 mt-8 md:mt-10 mb-4 md:mb-6 leading-tight relative after:content-[''] after:absolute after:bottom-[-8px] after:left-0 after:w-16 after:h-1 after:bg-gradient-to-r after:from-blue-500 after:to-purple-500"
+                                {...props}
+                            />
+                        ),
+                        h3: ({ ...props }) => (
+                            <h3
+                                className="text-xl md:text-2xl font-semibold text-neutral-800 mt-6 md:mt-8 mb-3 md:mb-4 leading-tight flex items-center before:content-['#'] before:text-blue-500 before:mr-2 before:text-lg md:before:text-xl"
+                                {...props}
+                            />
+                        ),
+                        p: ({ node, ...props }) => {
+                            const hasBlockChild = (
+                                node?.children as ElementContent[]
+                            )?.some(
+                                (child): child is Element =>
+                                    'tagName' in child &&
+                                    [
+                                        'div',
+                                        'img',
+                                        'pre',
+                                        'iframe',
+                                        'table',
+                                        'blockquote',
+                                    ].includes(child.tagName)
+                            );
+
+                            const Component = hasBlockChild ? 'div' : 'p';
+
+                            return (
+                                <Component
+                                    className='text-base md:text-lg text-neutral-700 leading-relaxed mb-4 md:mb-6 font-normal'
+                                    {...props}
+                                />
+                            );
+                        },
+
+                        a: ({ ...props }) => (
+                            <a
+                                className='text-blue-600 hover:text-blue-800 font-medium underline underline-offset-4 decoration-blue-300 hover:decoration-blue-500 transition-all duration-200'
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                {...props}
+                            />
+                        ),
+                        ul: ({ ...props }) => (
+                            <ul
+                                className='list-disc pl-5 md:pl-6 mb-4 md:mb-6 space-y-2 md:space-y-3 marker:text-blue-400'
+                                {...props}
+                            />
+                        ),
+                        ol: ({ ...props }) => (
+                            <ol
+                                className='list-decimal pl-5 md:pl-6 mb-4 md:mb-6 space-y-2 md:space-y-3 marker:font-medium marker:text-blue-500'
+                                {...props}
+                            />
+                        ),
+                        li: ({ ...props }) => (
+                            <li
+                                className='text-base md:text-lg text-neutral-700 leading-relaxed pl-1 md:pl-2 marker:font-medium'
+                                {...props}
+                            />
+                        ),
+                        blockquote: ({ ...props }) => (
+                            <blockquote
+                                className='border-l-4 border-blue-400 pl-4 md:pl-6 italic text-neutral-600 my-4 md:my-6 py-1 md:py-2 bg-blue-50 rounded-r-lg'
+                                {...props}
+                            />
+                        ),
+                        code({ className, children, ...props }: CodeProps) {
+                            const match = /language-(\w+)/.exec(
+                                className || ''
+                            );
+                            const isInline = !className;
+
+                            if (isInline) {
+                                return (
+                                    <code
+                                        className='inline bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-mono text-sm border border-red-300'
+                                        {...props}
+                                    >
+                                        {String(children).trim()}
+                                    </code>
+                                );
+                            }
+
+                            return (
+                                <div className='rounded-lg overflow-hidden my-4 md:my-6 group'>
+                                    <div className='flex items-center justify-between bg-neutral-800 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-200'>
+                                        <span>{match?.[1] || 'code'}</span>
+                                        <CopyButton
+                                            textToCopy={String(
+                                                children
+                                            ).replace(/\n$/, '')}
+                                        />
+                                    </div>
+                                    <SyntaxHighlighter
+                                        // @ts-expect-error - atomDark type is not properly exported
+                                        style={atomDark}
+                                        language={match?.[1] || 'text'}
+                                        PreTag='div'
+                                        className='!bg-neutral-900 !rounded-b-lg !p-3 md:!p-4 text-xs md:text-sm !m-0'
+                                        showLineNumbers
+                                        {...props}
+                                    >
+                                        {String(children).replace(/\n$/, '')}
+                                    </SyntaxHighlighter>
+                                </div>
+                            );
+                        },
+                        hr: ({ ...props }) => (
+                            <hr
+                                className='my-6 md:my-8 h-px bg-gradient-to-r from-transparent via-blue-300 to-transparent border-0'
+                                {...props}
+                            />
+                        ),
+                        img: ({ src, alt }) => {
+                            if (!src || typeof src !== 'string') return null;
+
+                            return (
+                                <div className='my-6 md:my-8 rounded-xl overflow-hidden shadow-lg border border-neutral-200 group'>
+                                    <Image
+                                        src={optimizeCloudinaryUrl(
+                                            src || '',
+                                            'f_auto,q_auto,c_fill,w_400,dpr_auto'
+                                        )}
+                                        alt={alt || ''}
+                                        width={800}
+                                        height={400}
+                                        className='w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]'
+                                        unoptimized
+                                    />
+                                    {alt && (
+                                        <div className='bg-neutral-50 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-600 text-center border-t border-neutral-200'>
+                                            {alt}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        },
+                        table: ({ ...props }) => {
+                            const showAd = !firstAdRendered;
+                            if (showAd) firstAdRendered = true;
+                            return (
+                                <>
+                                    <div className='overflow-x-auto my-4 md:my-6 rounded-lg border border-neutral-200 shadow-sm'>
+                                        <table
+                                            className='min-w-full divide-y divide-neutral-200'
+                                            {...props}
+                                        />
+                                    </div>
+                                    {showAd && <ClientAd adSlot='9984010614' />}
+                                </>
+                            );
+                        },
+                        th: ({ ...props }) => (
+                            <th
+                                className='px-3 md:px-4 py-2 md:py-3 bg-neutral-50 text-left text-xs md:text-sm font-semibold text-neutral-700 uppercase tracking-wider border-b border-neutral-200'
+                                {...props}
+                            />
+                        ),
+                        td: ({ ...props }) => (
+                            <td
+                                className='px-3 md:px-4 py-2 md:py-3 text-xs md:text-sm text-neutral-700 border-b border-neutral-200'
+                                {...props}
+                            />
+                        ),
+                        tr: ({ ...props }) => (
+                            <tr
+                                className='hover:bg-neutral-50 transition-colors'
+                                {...props}
+                            />
+                        ),
+                        strong: ({ ...props }) => (
+                            <strong
+                                className='font-semibold text-neutral-900'
+                                {...props}
+                            />
+                        ),
+                        em: ({ ...props }) => (
+                            <em className='italic text-blue-600' {...props} />
+                        ),
+                    }}
+                >
+                    {content}
+                </ReactMarkdown>
+            </div>
+        );
+    };
 
     return (
         <>
@@ -358,13 +351,13 @@ function BlogPostComponent({
                     <aside className='lg:w-80'>
                         <div className='sticky top-4 sm:top-8 space-y-8 sm:space-y-10'>
                             <h2
-                                className={`text-lg sm:text-xl mb-3 sm:mb-4 font-semibold text-neutral-800 ${poppins.className}`}
+                                className={`text-lg sm:text-xl mb-3 sm:mb-4 font-semibold text-neutral-800 font-poppins`}
                             >
                                 Popular Posts
                             </h2>
                             <PopularPosts posts={popularPosts} />
                             <h2
-                                className={`text-lg sm:text-xl mb-3 sm:mb-4 font-semibold text-neutral-800 ${poppins.className}`}
+                                className={`text-lg sm:text-xl mb-3 sm:mb-4 font-semibold text-neutral-800 font-poppins`}
                             >
                                 Latest Posts
                             </h2>

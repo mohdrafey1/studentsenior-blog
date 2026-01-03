@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Poppins, Lora } from 'next/font/google';
+import { Poppins, Lora, Inter } from 'next/font/google';
 import Script from 'next/script';
 import AdBlockGuard from './components/AdBlockGuard/AdBlockGuard';
 import './globals.css';
@@ -8,13 +8,19 @@ import './globals.css';
 const poppins = Poppins({
     variable: '--font-poppins',
     subsets: ['latin'],
-    weight: ['600'],
+    weight: ['400', '600', '700'],
 });
 
 const lora = Lora({
     variable: '--font-lora',
     subsets: ['latin'],
     weight: ['400'],
+});
+
+const inter = Inter({
+    variable: '--font-inter',
+    subsets: ['latin'],
+    weight: ['400', '500'],
 });
 
 // ✅ Metadata
@@ -45,7 +51,7 @@ export default function RootLayout({
             </head>
             <body
                 suppressHydrationWarning
-                className={`${poppins.variable} ${lora.variable} antialiased`}
+                className={`${poppins.variable} ${lora.variable} ${inter.variable} antialiased`}
             >
                 {/* ✅ AdBlockGuard runs on client side only */}
                 <AdBlockGuard>{children}</AdBlockGuard>
