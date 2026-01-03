@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@theme {
+  --font-poppins: var(--font-poppins);
+  --font-lora: var(--font-lora);
+  --font-inter: var(--font-inter);
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

@@ -1,16 +1,15 @@
 import React, { Suspense } from 'react';
 import Header from '@/app/components/header';
 import '@/app/globals.css';
-import { Poppins } from 'next/font/google';
+
 import { TrendingUp } from 'lucide-react';
 import PopularPosts from './components/popular-post';
 import Footer from '@/app/components/Footer';
 import Link from 'next/link';
 import { api } from '@/config/apiConfig';
 import ClientAd from './components/Ads/AdsClient';
+import { BLOG_CATEGORIES } from '@/constant/categories';
 import BlogPostList from './components/blog-list';
-
-const poppins = Poppins({ subsets: ['latin'], weight: '600', preload: true });
 
 export const revalidate = 60;
 
@@ -41,6 +40,20 @@ interface PageProps {
     searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
+export async function generateMetadata(): Promise<import('next').Metadata> {
+    return {
+        title: 'Student Senior Blogs - Tech, Career & Resources',
+        description:
+            'Explore tech insights, study tips, and college resources crafted by Student Senior.',
+        openGraph: {
+            title: 'Student Senior Blogs - Tech, Career & Resources',
+            description:
+                'Top-notch articles on Node.js, React, Career Growth, and more.',
+            type: 'website',
+        },
+    };
+}
+
 export default async function HomePage({
     searchParams,
 }: PageProps): Promise<React.ReactElement> {
@@ -51,17 +64,7 @@ export default async function HomePage({
     const { posts, total, popular } = await getData(currentPage, postsPerPage);
     const totalPages = total ? Math.ceil(total / postsPerPage) : 1;
 
-    const category = [
-        'nodejs',
-        'backend',
-        'express',
-        'technology',
-        'NextJs',
-        'React',
-        'Earning',
-        'Career',
-        'web devlopment',
-    ];
+    const category = BLOG_CATEGORIES;
 
     return (
         <>
@@ -79,7 +82,7 @@ export default async function HomePage({
                     <main className='w-full'>
                         <section className='mb-12'>
                             <h2
-                                className={`text-2xl font-semibold mb-4 pl-2 ${poppins.className}`}
+                                className={`text-2xl font-semibold mb-4 pl-2 font-poppins`}
                             >
                                 Home
                             </h2>
@@ -139,7 +142,7 @@ export default async function HomePage({
                         {/* Categories */}
                         <section className='py-10'>
                             <h3
-                                className={`${poppins.className} text-2xl font-semibold mb-6 text-gray-900 text-center lg:text-left`}
+                                className={`font-poppins text-2xl font-semibold mb-6 text-gray-900 text-center lg:text-left`}
                             >
                                 Stories from All Interests
                             </h3>
@@ -151,7 +154,7 @@ export default async function HomePage({
                                         href={`/search?q=${encodeURIComponent(
                                             item
                                         )}`}
-                                        className={`${poppins.className} group relative bg-stone-100 text-gray-800 font-medium px-5 py-2 rounded-full shadow-sm hover:bg-blue-500 hover:text-white transition-all duration-300`}
+                                        className={`font-poppins group relative bg-stone-100 text-gray-800 font-medium px-5 py-2 rounded-full shadow-sm hover:bg-blue-500 hover:text-white transition-all duration-300`}
                                     >
                                         <span className='relative z-10 capitalize'>
                                             {item}
@@ -168,7 +171,7 @@ export default async function HomePage({
                             <div className='flex items-center gap-2 mb-4'>
                                 <TrendingUp className='text-gray-700' />
                                 <h3
-                                    className={`${poppins.className} text-xl font-semibold`}
+                                    className={`font-poppins text-xl font-semibold`}
                                 >
                                     Popular
                                 </h3>

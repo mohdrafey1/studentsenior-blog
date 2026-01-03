@@ -4,22 +4,9 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Image from 'next/image';
 import logo from '../../../public/favicon.png';
 import { Search, X } from 'lucide-react';
-import { Poppins, Inter } from 'next/font/google';
+
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-
-// Font setup
-const poppins = Poppins({
-    subsets: ['latin'],
-    weight: ['600', '700'],
-    preload: true,
-});
-
-const inter = Inter({
-    subsets: ['latin'],
-    weight: ['400', '500'],
-    preload: true,
-});
 
 // SearchBar Component
 function SearchBar() {
@@ -65,7 +52,7 @@ function SearchBar() {
                 onKeyDown={handleKeyDown}
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
-                className={`ml-2 w-full text-sm text-gray-900 placeholder-gray-400 bg-transparent outline-none ${inter.className}`}
+                className={`ml-2 w-full text-sm text-gray-900 placeholder-gray-400 bg-transparent outline-none font-inter`}
                 aria-label='Search blog posts'
             />
             {searchQuery && (
@@ -97,7 +84,7 @@ const Header: React.FC = () => {
                         priority
                     />
                     <span
-                        className={`${poppins.className} text-xl sm:text-2xl text-gray-900 font-semibold`}
+                        className={`font-poppins text-xl sm:text-2xl text-gray-900 font-semibold`}
                     >
                         Blogs
                     </span>
