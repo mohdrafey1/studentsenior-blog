@@ -303,23 +303,6 @@ function BlogPostComponent({
                                 </div>
                             </div>
 
-                            {/* Tags */}
-                            {Array.isArray(post.tags) &&
-                                post.tags.length > 0 && (
-                                    <div className='flex flex-wrap gap-2 mb-4 sm:mb-6'>
-                                        {post.tags.map(
-                                            (tag: string, index: number) => (
-                                                <span
-                                                    key={`${tag}-${index}`}
-                                                    className='px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer bg-neutral-100 text-neutral-700 border border-neutral-200 hover:bg-neutral-200 transition-all duration-200'
-                                                >
-                                                    #{tag}
-                                                </span>
-                                            )
-                                        )}
-                                    </div>
-                                )}
-
                             {/* Banner Image */}
                             {post.banner && (
                                 <div className='relative w-full h-48 sm:h-52 md:h-64 lg:h-72 xl:h-80 mb-6 sm:mb-8 rounded-xl overflow-hidden shadow-lg'>
@@ -344,7 +327,22 @@ function BlogPostComponent({
                         </div>
                         <ClientAd adSlot='9984010614' />
                         <footer className='px-4 sm:px-6 md:px-10 py-6 sm:py-8 border-t border-neutral-200'>
-                            {/* Optional footer content can go here */}
+                            {/* Tags */}
+                            {Array.isArray(post.tags) &&
+                                post.tags.length > 0 && (
+                                    <div className='flex flex-wrap gap-2 mb-4 sm:mb-6'>
+                                        {post.tags.map(
+                                            (tag: string, index: number) => (
+                                                <span
+                                                    key={`${tag}-${index}`}
+                                                    className='px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer bg-neutral-100 text-neutral-700 border border-neutral-200 hover:bg-neutral-200 transition-all duration-200'
+                                                >
+                                                    #{tag}
+                                                </span>
+                                            )
+                                        )}
+                                    </div>
+                                )}
                         </footer>
                     </article>
 
