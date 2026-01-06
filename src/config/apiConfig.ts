@@ -9,5 +9,6 @@ export const api = {
         latestBlogs: `${API_BASE_URL}/latestBlogs`,
         searchBlogs: `${API_BASE_URL}/blog/search`,
         sitemap: `${API_BASE_URL}/sitemap`,
+        incrementView: (slug: string) => `${API_BASE_URL}/blogs/${slug}/view`,
     },
 };
