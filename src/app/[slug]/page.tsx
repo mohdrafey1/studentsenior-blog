@@ -24,6 +24,7 @@ import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 import CopyButton from '@/app/components/copy-button';
 import type { Element, ElementContent } from 'hast';
 import AiSummary from '../components/AiSummary/AiSummary';
+import ViewTracker from '@/app/components/view-tracker';
 
 function BlogPostComponent({
     post,
@@ -482,11 +483,14 @@ export default async function BlogPostPage({
         ]);
 
         return (
-            <BlogPostComponent
-                post={postJson.data}
-                popularPosts={popularJson.data || []}
-                latestPosts={latestJson.data || []}
-            />
+            <>
+                <BlogPostComponent
+                    post={postJson.data}
+                    popularPosts={popularJson.data || []}
+                    latestPosts={latestJson.data || []}
+                />
+                <ViewTracker slug={slug} />
+            </>
         );
     } catch (error) {
         console.error('Error fetching blog post:', error);
