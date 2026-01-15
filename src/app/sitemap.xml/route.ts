@@ -8,7 +8,7 @@ export async function GET() {
 
     try {
         const res = await fetch(
-            'https://blogapi.studentsenior.com/v1/sitemap',
+            'https://uzgbba5x95.execute-api.ap-south-1.amazonaws.com/v1/sitemap',
             {
                 cache: 'no-store', // 🔥 ensures fetch is not cached
             }
