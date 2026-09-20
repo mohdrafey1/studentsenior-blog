@@ -1,4 +1,4 @@
-import { Slug } from '@/constant/interface';
+import { api } from '@/config/apiConfig';
 
 export const dynamic = 'force-dynamic'; // ensures it runs every time
 export const revalidate = 0; // disable ISR caching (optional but good practice)
@@ -7,20 +7,17 @@ export async function GET() {
     const baseUrl = 'https://blog.studentsenior.com';
 
     try {
-        const res = await fetch(
-            'https://uzgbba5x95.execute-api.ap-south-1.amazonaws.com/v1/sitemap',
-            {
-                cache: 'no-store', // 🔥 ensures fetch is not cached
-            }
-        );
+        const res = await fetch(api.blog.sitemap, {
+            cache: 'no-store', // 🔥 ensures fetch is not cached
+        });
 
         const posts = await res.json();
 
         const postUrls = (posts?.data || [])
             .map(
-                (post: Slug) => `
+                (slug: string) => `
       <url>
-        <loc>${baseUrl}/${post}</loc>
+        <loc>${baseUrl}/${slug}</loc>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>
       </url>`

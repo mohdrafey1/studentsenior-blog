@@ -16,18 +16,20 @@ export const revalidate = 60;
 async function getData(page: number, limit: number) {
     try {
         const [postsRes, popularRes] = await Promise.all([
-            fetch(`${api.blog.paginateblog}?page=${page}&limit=${limit}`, {
+            fetch(`${api.blog.list}?page=${page}&limit=${limit}`, {
                 next: { revalidate: 60 },
             }),
-            fetch(api.blog.popularBlogs, { next: { revalidate: 120 } }),
+            fetch(api.blog.popular, { next: { revalidate: 120 } }),
         ]);
 
         const postsData = await postsRes.json();
         const popularData = await popularRes.json();
 
         return {
-            posts: postsData.data || [],
-            total: postsData.metadata?.total || 0,
+            // The list endpoint returns { blogs, pagination } under `data`;
+            // backend2 returned a bare array with a sibling `metadata` object.
+            posts: postsData.data?.blogs || [],
+            total: postsData.data?.pagination?.totalItems || 0,
             popular: popularData.data || [],
         };
     } catch (error) {

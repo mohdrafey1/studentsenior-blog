@@ -375,7 +375,7 @@ export async function generateMetadata({ params }: { params: tParams }) {
     const blogId = slug;
 
     try {
-        const postRes = await fetch(`${api.blog.allBlogs}/${blogId}`, {
+        const postRes = await fetch(api.blog.bySlug(blogId), {
             next: { revalidate: 3600 },
             headers: { 'Content-Type': 'application/json' },
         });
@@ -451,15 +451,15 @@ export default async function BlogPostPage({
     try {
         // Fetch all data in parallel
         const [postRes, popularRes, latestRes] = await Promise.all([
-            fetch(`${api.blog.allBlogs}/${blogId}`, {
+            fetch(api.blog.bySlug(blogId), {
                 next: { revalidate: 3600 },
                 headers,
             }),
-            fetch(api.blog.popularBlogs, {
+            fetch(api.blog.popular, {
                 next: { revalidate: 3600 },
                 headers,
             }),
-            fetch(api.blog.latestBlogs, {
+            fetch(api.blog.latest, {
                 next: { revalidate: 3600 },
                 headers,
             }),
