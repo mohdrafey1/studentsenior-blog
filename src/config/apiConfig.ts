@@ -7,7 +7,7 @@
  * NEXT_PUBLIC_API_URL must point at the API origin plus /api/v2.
  */
 export const API_BASE_URL =
-    process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v2';
+    (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v2').replace(/\/+$/, '');
 
 export const api = {
     blog: {

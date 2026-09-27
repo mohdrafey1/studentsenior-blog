@@ -22,9 +22,11 @@ async function getData(page: number, limit: number) {
             fetch(api.blog.popular, { next: { revalidate: 120 } }),
         ]);
 
+        if (!postsRes.ok || !popularRes.ok) throw new Error('Blog content is temporarily unavailable');
         const postsData = await postsRes.json();
         const popularData = await popularRes.json();
 
+        if (postsData.success !== true || !Array.isArray(postsData.data?.blogs) || popularData.success !== true || !Array.isArray(popularData.data)) throw new Error('Unexpected blog response');
         return {
             // The list endpoint returns { blogs, pagination } under `data`;
             // backend2 returned a bare array with a sibling `metadata` object.
@@ -33,8 +35,7 @@ async function getData(page: number, limit: number) {
             popular: popularData.data || [],
         };
     } catch (error) {
-        console.error('Error fetching SSR data:', error);
-        return { posts: [], total: 0, popular: [] };
+        throw error;
     }
 }
 
@@ -60,7 +61,8 @@ export default async function HomePage({
     searchParams,
 }: PageProps): Promise<React.ReactElement> {
     const resolvedParams = await searchParams;
-    const currentPage = Number(resolvedParams.page) || 1;
+    const requestedPage = Number(resolvedParams.page);
+    const currentPage = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
     const postsPerPage = 10;
 
     const { posts, total, popular } = await getData(currentPage, postsPerPage);
@@ -100,7 +102,9 @@ export default async function HomePage({
                             <div className='mt-10 flex items-center justify-center gap-3'>
                                 {/* Previous Button */}
                                 <Link
-                                    href={`?page=${currentPage - 1}`}
+                                    href={`?page=${Math.max(1, currentPage - 1)}`}
+                                    aria-disabled={currentPage <= 1}
+                                    tabIndex={currentPage <= 1 ? -1 : undefined}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                                         currentPage > 1
                                             ? 'bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 shadow-sm'
@@ -124,7 +128,9 @@ export default async function HomePage({
 
                                 {/* Next Button */}
                                 <Link
-                                    href={`?page=${currentPage + 1}`}
+                                    href={`?page=${Math.min(totalPages, currentPage + 1)}`}
+                                    aria-disabled={currentPage >= totalPages}
+                                    tabIndex={currentPage >= totalPages ? -1 : undefined}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                                         currentPage < totalPages
                                             ? 'bg-gradient-to-r from-indigo-100 to-indigo-200 hover:from-indigo-200 hover:to-indigo-300 text-indigo-700 shadow-sm'

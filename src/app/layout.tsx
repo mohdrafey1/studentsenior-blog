@@ -1,3 +1,4 @@
+import ServiceWorkerRegistration from './components/ServiceWorkerRegistration';
 import type { Metadata } from 'next';
 import { Poppins, Lora, Inter } from 'next/font/google';
 import Script from 'next/script';
@@ -53,6 +54,7 @@ export default function RootLayout({
                 suppressHydrationWarning
                 className={`${poppins.variable} ${lora.variable} ${inter.variable} antialiased`}
             >
+                <ServiceWorkerRegistration />
                 {/* ✅ AdBlockGuard runs on client side only */}
                 <AdBlockGuard>{children}</AdBlockGuard>
 

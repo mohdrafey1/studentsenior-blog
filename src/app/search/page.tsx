@@ -23,11 +23,16 @@ const poppins = Poppins({
 function SearchResults() {
     const searchParams = useSearchParams();
     const query = searchParams.get('q') || '';
+    const requestedPage = Number(searchParams.get('page'));
+    const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const [retry, setRetry] = useState(0);
+    const pageSize = 20;
     const [searchResults, setSearchResults] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        const controller = new AbortController();
         const fetchSearchResults = async () => {
             if (!query.trim()) {
                 setSearchResults([]);
@@ -40,7 +45,8 @@ function SearchResults() {
                 setError(null);
 
                 const response = await fetch(
-                    `${api.blog.search}?q=${encodeURIComponent(query)}`
+                    `${api.blog.search}?q=${encodeURIComponent(query)}&page=${page}&limit=${pageSize}`,
+                    { signal: controller.signal }
                 );
 
                 if (!response.ok) {
@@ -48,18 +54,21 @@ function SearchResults() {
                 }
 
                 const data = await response.json();
-                setSearchResults(data.data || []);
-            } catch (err) {
-                console.error('Search error:', err);
+                if (data.success !== true || !Array.isArray(data.data)) throw new Error('Unexpected search response');
+                setSearchResults(data.data);
+            } catch {
+                if (controller.signal.aborted) return;
+                console.error('Search request failed');
                 setError('Failed to load search results. Please try again.');
                 setSearchResults([]);
             } finally {
-                setIsLoading(false);
+                if (!controller.signal.aborted) setIsLoading(false);
             }
         };
 
         fetchSearchResults();
-    }, [query]);
+        return () => controller.abort();
+    }, [query, page, retry]);
 
     return (
         <div className='mb-8'>
@@ -86,7 +95,8 @@ function SearchResults() {
 
             {error && (
                 <div className='bg-red-50 border-l-4 border-red-500 p-4 mb-6'>
-                    <p className='text-red-700'>{error}</p>
+                    <p className='text-red-700' role='alert'>{error}</p>
+                    <button type='button' className='mt-2 rounded border px-3 py-2' onClick={() => setRetry(value => value + 1)}>Try again</button>
                 </div>
             )}
 
@@ -109,12 +119,19 @@ function SearchResults() {
                 </div>
             )}
 
+            {!isLoading && !error && query.trim() && (
+                <nav aria-label='Search result pages' className='mb-6 flex items-center gap-4'>
+                    {page > 1 && <Link href={`/search?q=${encodeURIComponent(query)}&page=${page - 1}`} className='rounded border px-3 py-2'>Previous</Link>}
+                    <span>Page {page}</span>
+                    {searchResults.length === pageSize && <Link href={`/search?q=${encodeURIComponent(query)}&page=${page + 1}`} className='rounded border px-3 py-2'>Next</Link>}
+                </nav>
+            )}
             <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
                 {searchResults.map((post) => (
                     <Link
                         prefetch={false}
                         key={post._id}
-                        href={`/blog/post/${post.slug}`}
+                        href={`/${post.slug}`}
                         className='group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-300'
                     >
                         {post.banner && (

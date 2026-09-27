@@ -380,6 +380,7 @@ export async function generateMetadata({ params }: { params: tParams }) {
             headers: { 'Content-Type': 'application/json' },
         });
 
+        if (postRes.status >= 500) throw new Error('Blog content is temporarily unavailable');
         if (!postRes.ok) {
             return {
                 title: 'Blog Post Not Found',
@@ -465,23 +466,20 @@ export default async function BlogPostPage({
             }),
         ]);
 
-        if (!postRes.ok) {
-            console.error(`Failed to fetch post: ${postRes.status}`);
-            return notFound();
-        }
+        if (postRes.status === 404) return notFound();
+        if (!postRes.ok) throw new Error('Blog post is temporarily unavailable');
 
         const postJson = await postRes.json();
-        if (!postJson?.data) {
-            console.error('Post data not found in response');
-            return notFound();
-        }
+        if (postJson.success !== true || !postJson.data) throw new Error('Unexpected blog response');
 
-        // Safely parse other JSONs
+        if (!popularRes.ok || !latestRes.ok) throw new Error('Related blog content is temporarily unavailable');
+        // Parse validated HTTP responses.
         const [popularJson, latestJson] = await Promise.all([
             popularRes.ok ? popularRes.json() : { data: [] },
             latestRes.ok ? latestRes.json() : { data: [] },
         ]);
 
+        if (popularJson.success !== true || latestJson.success !== true || !Array.isArray(popularJson.data) || !Array.isArray(latestJson.data)) throw new Error('Unexpected blog response');
         return (
             <>
                 <BlogPostComponent
@@ -493,7 +491,6 @@ export default async function BlogPostPage({
             </>
         );
     } catch (error) {
-        console.error('Error fetching blog post:', error);
-        return notFound();
+        throw error;
     }
 }
