@@ -22,6 +22,7 @@ import { formatReadTime, formatDate } from '@/utils/formatting';
 import ClientAd from '@/app/components/Ads/AdsClient';
 import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 import CopyButton from '@/app/components/copy-button';
+import ImageLightbox from '@/app/components/ImageLightbox/ImageLightbox';
 import type { Element, ElementContent } from 'hast';
 import AiSummary from '../components/AiSummary/AiSummary';
 import ViewTracker from '@/app/components/view-tracker';
@@ -178,16 +179,15 @@ function BlogPostComponent({
 
                             return (
                                 <div className='my-6 md:my-8 rounded-xl overflow-hidden shadow-lg border border-neutral-200 group'>
-                                    <Image
+                                    <ImageLightbox
                                         src={optimizeCloudinaryUrl(
-                                            src || '',
-                                            'f_auto,q_auto,c_fill,w_400,dpr_auto'
+                                            src,
+                                            'f_auto,q_auto,c_fill,w_800,dpr_auto'
                                         )}
                                         alt={alt || ''}
                                         width={800}
                                         height={400}
-                                        className='w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]'
-                                        unoptimized
+                                        sizes='(max-width: 640px) 100vw, (max-width: 1024px) 75vw, 800px'
                                     />
                                     {alt && (
                                         <div className='bg-neutral-50 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-600 text-center border-t border-neutral-200'>
