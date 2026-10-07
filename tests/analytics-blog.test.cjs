@@ -66,6 +66,7 @@ test('blog cards track native and clipboard share success, never cancellation', 
         ]),
     );
     let resolve;
+    const clipboard = [];
     Object.defineProperty(globalThis, 'window', {
         configurable: true,
         value: { location: { origin: 'https://blog.example.test' } },
@@ -78,6 +79,11 @@ test('blog cards track native and clipboard share success, never cancellation', 
         Object.defineProperty(globalThis, 'navigator', {
             configurable: true,
             value: {
+                clipboard: {
+                    writeText: async (value) => {
+                        clipboard.push(value);
+                    },
+                },
                 share: () =>
                     new Promise((done) => {
                         resolve = done;
@@ -86,6 +92,9 @@ test('blog cards track native and clipboard share success, never cancellation', 
         });
         const pending = handleShare();
         assert.equal(calls.length, 0);
+        assert.deepEqual(clipboard, [
+            'https://blog.example.test/private-title',
+        ]);
         resolve();
         await pending;
         assert.deepEqual(calls, [['share', { type: 'blog', id: post._id }]]);
@@ -112,4 +121,71 @@ test('blog cards track native and clipboard share success, never cancellation', 
             else delete globalThis[name];
         }
     }
+});
+
+test('blog search constructs its tracker only once across renders', () => {
+    const React = require('react');
+    const filename = require.resolve('../src/app/search/page.tsx');
+    const loaded = new Module(filename, module);
+    const ref = { current: null };
+    let constructions = 0;
+    loaded.require = (name) => {
+        if (name === 'react')
+            return {
+                ...React,
+                useState: (initial) => [initial, () => {}],
+                useEffect() {},
+                useRef: () => ref,
+            };
+        if (name === '@/analytics/search')
+            return {
+                SearchTracker: class {
+                    constructor() {
+                        constructions++;
+                    }
+                    update() {}
+                },
+            };
+        if (name === 'next/navigation')
+            return { useSearchParams: () => new URLSearchParams('q=exam') };
+        if (name === 'next/font/google')
+            return { Poppins: () => ({ className: '' }) };
+        if (name === '@/config/apiConfig') return { api: {} };
+        if (name === '@/utils/cloudinary')
+            return { optimizeCloudinaryUrl: (value) => value };
+        if (name === '@/utils/formatting')
+            return { formatDate: (value) => value };
+        if (name === '@/analytics') return { analytics: { track() {} } };
+        if (name.startsWith('@/app/components/'))
+            return { __esModule: true, default: 'div' };
+        return require(name);
+    };
+    loaded._compile(
+        ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
+            compilerOptions: {
+                module: ts.ModuleKind.CommonJS,
+                jsx: ts.JsxEmit.ReactJSX,
+                esModuleInterop: true,
+            },
+        }).outputText,
+        filename,
+    );
+    const find = (node) => {
+        if (!node || typeof node !== 'object') return;
+        if (
+            typeof node.type === 'function' &&
+            node.type.name === 'SearchResults'
+        )
+            return node.type;
+        for (const child of React.Children.toArray(node.props?.children)) {
+            const match = find(child);
+            if (match) return match;
+        }
+    };
+    const results = find(loaded.exports.default());
+    assert.ok(results);
+    results();
+    results();
+    results();
+    assert.equal(constructions, 1);
 });

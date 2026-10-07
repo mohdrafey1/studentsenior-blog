@@ -42,10 +42,19 @@ export function tabStorage(
         }
     };
     const renew = () => write(lease, now() + LEASE_MS);
+    const orphans: string[] = [];
     const candidates: string[] = [prefix]; // Migrate the previous single-queue format.
     try {
         for (let index = 0; index < (storage?.length || 0); index++) {
             const candidate = storage?.key(index);
+            if (candidate?.startsWith(`${prefix}:lease:`)) {
+                const owner = candidate.slice(`${prefix}:lease:`.length);
+                if (
+                    validId.test(owner) &&
+                    !storage?.getItem(`${prefix}:${owner}`)
+                )
+                    orphans.push(candidate);
+            }
             if (
                 candidate?.startsWith(`${prefix}:`) &&
                 validId.test(candidate.slice(prefix.length + 1))
@@ -55,6 +64,7 @@ export function tabStorage(
     } catch {
         /* Storage is optional. */
     }
+    for (const orphan of orphans) remove(orphan);
     const events = new Map<string, SavedQueue['events'][number]>();
     const claimed: string[] = [];
     for (const candidate of candidates) {
@@ -79,6 +89,8 @@ export function tabStorage(
             .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))
             .slice(-500),
     };
+    // A live page has a queue key even before the first debounced event write.
+    if (!read(key)) write(key, restored);
     renew();
     // Secure recovered events in our own key before deleting their former owner.
     if (claimed.length && write(key, restored)) {

@@ -866,3 +866,123 @@ test('initial identity rotation retains its session start and latest 499 events 
     assert.equal(queue.snapshot.events[1].props.queryLength, 1);
     assert.equal(queue.snapshot.events.at(-1).eventId, newestId);
 });
+
+test('failed session writes cannot replace a fresh session from activity, heartbeat or identity adoption', () => {
+    let shared = {
+        sessionId: 'old_session_1234',
+        lastActiveAt: Date.parse('2026-10-07T10:00:00Z'),
+    };
+    const { queue, advance } = fixture({
+        readSession: () => shared,
+        writeSession() {},
+        waitForIdentity: true,
+    });
+    queue.screen('/notes', 'real-college');
+    advance(1800000);
+    queue.activity();
+    const fresh = queue.session;
+    assert.notEqual(fresh, shared.sessionId);
+    queue.activity();
+    assert.equal(queue.session, fresh);
+    advance(30000);
+    queue.heartbeat();
+    assert.equal(queue.session, fresh);
+    // A different old ID is also rejected, not just the retired original ID.
+    shared = { ...shared, sessionId: 'other_old_session' };
+    queue.activity();
+    assert.equal(queue.session, fresh);
+    queue.identify('new-account', true);
+    assert.notEqual(queue.session, shared.sessionId);
+    const accountSession = queue.session;
+    queue.activity();
+    queue.heartbeat();
+    assert.equal(queue.session, accountSession);
+});
+test('same-session persisted timestamps may lag; another tab session requires newer activity', () => {
+    let shared;
+    const { queue, advance, time } = fixture({
+        readSession: () => shared,
+        writeSession() {},
+        waitForIdentity: true,
+    });
+    const initial = queue.session;
+    shared = { sessionId: initial, lastActiveAt: time() - 10 };
+    queue.activity();
+    assert.equal(queue.session, initial);
+    advance(1000);
+    shared = { sessionId: 'other_new_session', lastActiveAt: time() };
+    queue.activity();
+    assert.equal(queue.session, shared.sessionId);
+    advance(1000);
+    queue.activity();
+    shared = { sessionId: 'other_older_session', lastActiveAt: time() - 1 };
+    queue.heartbeat();
+    assert.equal(queue.session, 'other_new_session');
+});
+test('every local session rotation restores the current screen without a duplicate on navigation', () => {
+    const { queue, advance } = fixture({ waitForIdentity: true });
+    queue.screen('/[slug]/notes', 'real-college');
+    advance(1800000);
+    queue.activity();
+    let current = queue.snapshot.events.filter(
+        (event) => event.sessionId === queue.session,
+    );
+    assert.deepEqual(
+        current.map((event) => event.name),
+        ['session_start', 'screen_view'],
+    );
+    assert.equal(current[1].screen, '/[slug]/notes');
+    assert.equal(current[1].college, 'real-college');
+    assert.equal(current[1].props.prevDurationMs, 0);
+    advance(1800000);
+    queue.screen('/[slug]/pyqs', 'real-college');
+    current = queue.snapshot.events.filter(
+        (event) => event.sessionId === queue.session,
+    );
+    assert.deepEqual(
+        current.map((event) => event.name),
+        ['session_start', 'screen_view'],
+    );
+    assert.equal(current[1].screen, '/[slug]/pyqs');
+    queue.identify(null);
+    queue.identify('account');
+    assert.deepEqual(
+        queue.snapshot.events.map((event) => event.name),
+        ['session_start', 'screen_view'],
+    );
+});
+test('collecting dead tabs removes orphan leases without skipping adjacent keys or live queues', () => {
+    const storage = memoryStorage();
+    storage.setItem('queue:lease:orphan01', '2000');
+    storage.setItem('queue:lease:orphan02', '0');
+    storage.setItem('queue:lease:live0001', '2000');
+    storage.setItem(
+        'queue:live0001',
+        JSON.stringify({ identity: null, events: [] }),
+    );
+    const tab = tabStorage(storage, 'queue', null, () => 1000, 'newtab01');
+    assert.equal(storage.getItem('queue:lease:orphan01'), null);
+    assert.equal(storage.getItem('queue:lease:orphan02'), null);
+    assert.equal(storage.getItem('queue:lease:live0001'), '2000');
+    assert.ok(storage.getItem(tab.key));
+});
+test('product search settles at 1.5 seconds; intermediate 500ms typing pauses cancel', (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { scheduleSettledSearch } = require('../src/analytics/search.ts');
+    const tracker = new SearchTracker('', true);
+    const events = [];
+    tracker.update('boo');
+    const cancel = scheduleSettledSearch(() =>
+        events.push(tracker.settle('boo', 10)),
+    );
+    t.mock.timers.tick(500);
+    assert.equal(events.length, 0);
+    cancel();
+    tracker.update('books');
+    scheduleSettledSearch(() => events.push(tracker.settle('books', 137)));
+    t.mock.timers.tick(1499);
+    assert.equal(events.length, 0);
+    t.mock.timers.tick(1);
+    assert.deepEqual(events, [{ queryLength: 5, resultCount: 137 }]);
+    assert.equal(tracker.settle('books', 20), null);
+});

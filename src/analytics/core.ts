@@ -241,6 +241,7 @@ export class AnalyticsQueue {
     private lastActiveAt: number;
     private flightController: AbortController | null = null;
     private restoredIds = new Set<string>();
+    private retiredSessions = new Set<string>();
     private paused = false;
     private identityReady: boolean;
     private now: () => number;
@@ -342,31 +343,44 @@ export class AnalyticsQueue {
             lastActiveAt: this.lastActiveAt,
         });
     }
-    /** Heartbeats do not count as interaction: an idle visible tab can expire. */
-    activity(): void {
-        if (this.paused) return;
+    private sharedSession(): SessionState | undefined {
         const shared = this.options.readSession?.();
-        if (
-            shared &&
+        return shared &&
+            !this.retiredSessions.has(shared.sessionId) &&
             token.test(shared.sessionId) &&
             Number.isFinite(shared.lastActiveAt) &&
-            shared.lastActiveAt <= this.now()
-        ) {
+            shared.lastActiveAt <= this.now() &&
+            (shared.sessionId === this.sessionId ||
+                shared.lastActiveAt >= this.lastActiveAt)
+            ? shared
+            : undefined;
+    }
+    /** Heartbeats do not count as interaction: an idle visible tab can expire. */
+    activity(): boolean {
+        if (this.paused) return false;
+        const shared = this.sharedSession();
+        if (shared) {
             this.sessionId = shared.sessionId;
             this.lastActiveAt = Math.max(
                 this.lastActiveAt,
                 shared.lastActiveAt,
             );
         }
-        if (this.now() - this.lastActiveAt >= 1800000) this.rotate();
+        const rotated = this.now() - this.lastActiveAt >= 1800000;
+        if (rotated) this.rotate();
         this.lastActiveAt = this.now();
         this.saveSession();
+        return rotated;
     }
     track(name: string, input: Record<string, unknown> = {}): void {
         if (this.paused) return;
         const props = safeProps(name, input);
         if (!props) return;
         if (name !== 'heartbeat' && name !== 'session_start') this.activity();
+        this.enqueue(name, props);
+    }
+    private enqueue(name: string, props: Props): void {
+        if (this.paused) return;
         this.events.push({
             eventId: this.id(),
             anonId: this.options.anonId,
@@ -385,19 +399,22 @@ export class AnalyticsQueue {
         if (!screenPattern.test(template) || template.length > 160) return;
         this.college =
             college && /^[a-z\d-]{1,100}$/.test(college) ? college : undefined;
-        this.activity();
-        if (routeKey === this.routeKey) return;
+        const changed = routeKey !== this.routeKey;
         const prevDurationMs = this.route
             ? Math.min(1800000, Math.max(0, this.now() - this.enteredAt))
             : 0;
-        this.route = template;
-        this.routeKey = routeKey;
-        this.enteredAt = this.now();
-        this.track('screen_view', { prevDurationMs });
+        if (changed) {
+            this.route = template;
+            this.routeKey = routeKey;
+            this.enteredAt = this.now();
+        }
+        const rotated = this.activity();
+        if (changed && !rotated)
+            this.enqueue('screen_view', { prevDurationMs });
     }
     heartbeat(): void {
         if (this.activeSince === null || this.paused) return;
-        const shared = this.options.readSession?.();
+        const shared = this.sharedSession();
         const lastActivity = Math.max(
             this.lastActiveAt,
             shared?.lastActiveAt || 0,
@@ -406,8 +423,10 @@ export class AnalyticsQueue {
             this.activeSince = this.now();
             return;
         }
-        if (shared && token.test(shared.sessionId))
+        if (shared) {
             this.sessionId = shared.sessionId;
+            this.lastActiveAt = lastActivity;
+        }
         const sec = Math.min(
             30,
             Math.max(0, (this.now() - this.activeSince) / 1000),
@@ -429,16 +448,19 @@ export class AnalyticsQueue {
         this.activeSince = this.now();
         void this.flush();
     }
-    private rotate() {
+    private rotate(restoreScreen = true) {
+        this.retiredSessions.add(this.sessionId);
         this.sessionId = this.id();
         this.lastActiveAt = this.now();
         this.saveSession();
         this.enteredAt = this.now();
         this.activeSince = this.hiddenAt === null ? this.now() : null;
-        this.track('session_start', {
+        this.enqueue('session_start', {
             isNewInstall: false,
             launchSource: 'unknown',
         });
+        if (restoreScreen && this.route)
+            this.enqueue('screen_view', { prevDurationMs: 0 });
     }
     private batch(): Batch {
         const batch: Batch = {
@@ -586,11 +608,10 @@ export class AnalyticsQueue {
             this.paused = false;
             if (changed) {
                 const fresh = this.events;
-                const shared = sharedChange
-                    ? this.options.readSession?.()
-                    : undefined;
+                const shared = sharedChange ? this.sharedSession() : undefined;
                 if (
                     shared &&
+                    shared.sessionId !== this.sessionId &&
                     token.test(shared.sessionId) &&
                     this.now() - shared.lastActiveAt < 1800000
                 ) {
@@ -601,11 +622,20 @@ export class AnalyticsQueue {
                     );
                 } else {
                     this.events = [];
-                    this.rotate();
+                    this.rotate(
+                        !fresh.some(
+                            (event) =>
+                                event.name === 'screen_view' &&
+                                event.screen === this.route,
+                        ),
+                    );
                     // Reuse a buffered cold-start event instead of counting two starts.
                     if (fresh.some((event) => event.name === 'session_start'))
                         this.events = fresh;
-                    else this.events.push(...fresh.slice(-499));
+                    else
+                        this.events.push(
+                            ...fresh.slice(-(500 - this.events.length)),
+                        );
                 }
                 this.events = this.events.map((event) => ({
                     ...event,
@@ -626,11 +656,10 @@ export class AnalyticsQueue {
         const wasPaused = this.paused;
         this.paused = false;
         if (changed || wasPaused) {
-            const shared = sharedChange
-                ? this.options.readSession?.()
-                : undefined;
+            const shared = sharedChange ? this.sharedSession() : undefined;
             if (
                 shared &&
+                (!changed || shared.sessionId !== this.sessionId) &&
                 token.test(shared.sessionId) &&
                 this.now() - shared.lastActiveAt < 1800000
             ) {

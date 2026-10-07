@@ -23,6 +23,11 @@ export default function BlogPostList({
         const postUrl = `${window.location.origin}/${post.slug}`;
         try {
             if (navigator.share) {
+                // Keep the native share invocation synchronous with the click gesture.
+                // Clipboard failure must not suppress the native share sheet.
+                void navigator.clipboard
+                    ?.writeText(postUrl)
+                    .catch(() => undefined);
                 await shareAndTrack(
                     () =>
                         navigator.share({

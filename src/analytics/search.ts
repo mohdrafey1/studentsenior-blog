@@ -50,3 +50,9 @@ export function searchTotal(value: unknown): number | undefined {
         ? candidate
         : undefined;
 }
+
+/** An explicit submission can call the same tracker before this quiet-period fallback. */
+export function scheduleSettledSearch(settle: () => void): () => void {
+    const timer = setTimeout(settle, 1500);
+    return () => clearTimeout(timer);
+}

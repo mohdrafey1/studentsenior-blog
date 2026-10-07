@@ -32,7 +32,8 @@ function SearchResults() {
             : 1;
     const [retry, setRetry] = useState(0);
     const pageSize = 20;
-    const tracker = useRef(new SearchTracker());
+    const tracker = useRef<SearchTracker | null>(null);
+    if (!tracker.current) tracker.current = new SearchTracker();
     tracker.current.update(query);
     const [searchResults, setSearchResults] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -65,7 +66,7 @@ function SearchResults() {
                     throw new Error('Unexpected search response');
                 setSearchResults(data.data);
                 if (!controller.signal.aborted) {
-                    const props = tracker.current.settleFirstPage(query, page);
+                    const props = tracker.current?.settleFirstPage(query, page);
                     if (props)
                         analytics.track('search', { scope: 'blog', ...props });
                 }
