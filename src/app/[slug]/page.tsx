@@ -26,6 +26,7 @@ import ImageLightbox from '@/app/components/ImageLightbox/ImageLightbox';
 import type { Element, ElementContent } from 'hast';
 import AiSummary from '../components/AiSummary/AiSummary';
 import ViewTracker from '@/app/components/view-tracker';
+import Mermaid from '@/app/components/Mermaid/Mermaid';
 
 function BlogPostComponent({
     post,
@@ -144,10 +145,16 @@ function BlogPostComponent({
                                 );
                             }
 
+                            const language = match?.[1] || '';
+
+                            if (language === 'mermaid') {
+                                return <Mermaid chart={String(children).replace(/\n$/, '')} />;
+                            }
+
                             return (
                                 <div className='rounded-lg overflow-hidden my-4 md:my-6 group'>
                                     <div className='flex items-center justify-between bg-neutral-800 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-200'>
-                                        <span>{match?.[1] || 'code'}</span>
+                                        <span>{language || 'code'}</span>
                                         <CopyButton
                                             textToCopy={String(
                                                 children
@@ -306,7 +313,7 @@ function BlogPostComponent({
 
                             {/* Banner Image */}
                             {post.banner && (
-                                <div className='relative w-full h-48 sm:h-52 md:h-64 lg:h-72 xl:h-80 mb-6 sm:mb-8 rounded-xl overflow-hidden shadow-lg'>
+                                <div className='relative w-full h-48 sm:h-52 md:h-64 lg:h-72 xl:h-96 mb-6 sm:mb-8 rounded-xl overflow-hidden shadow-lg'>
                                     <Image
                                         src={post.banner}
                                         alt={`Banner for ${post.title}`}

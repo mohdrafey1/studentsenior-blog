@@ -32,7 +32,7 @@ export default function BlogPostList({
     };
 
     return (
-        <>
+        <div className='grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-6'>
             {posts.map((post, idx) => (
                 <BlogPostCard
                     key={post._id}
@@ -42,6 +42,6 @@ export default function BlogPostList({
                     onClick={() => handlePostClick(post.slug)}
                 />
             ))}
-        </>
+        </div>
     );
 }

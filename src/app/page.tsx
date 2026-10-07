@@ -91,7 +91,7 @@ export default async function HomePage({
                                 Home
                             </h2>
 
-                            <div className='space-y-6'>
+                            <div>
                                 <BlogPostList
                                     posts={posts}
                                     currentPage={currentPage}

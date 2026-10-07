@@ -61,7 +61,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
     return (
         // <Link key={post._id} href={`/blog/post/${post.slug}`} className='block'>
         <article
-            className='group bg-white cursor-pointer border border-slate-100 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md hover:shadow-blue-500/5 hover:-translate-y-0.5 flex flex-col sm:flex-row h-full relative'
+            className='group bg-white cursor-pointer border border-slate-100 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md hover:shadow-blue-500/5 hover:-translate-y-0.5 flex flex-col h-full relative'
             onClick={onClick}
             onKeyDown={(e) => handleKeyDown(e, onClick)}
             tabIndex={onClick ? 0 : undefined}
@@ -69,18 +69,18 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
             aria-label={ariaLabel || `Blog post: ${post.title}`}
         >
             {post.banner && (
-                <div className='w-full sm:w-36 md:w-48 h-40 sm:h-auto relative flex-shrink-0 overflow-hidden'>
+                <div className='w-full aspect-[16/9] sm:aspect-[2/1] relative flex-shrink-0 overflow-hidden'>
                     <div className='absolute inset-0 bg-slate-50' />
                     <Image
                         src={optimizeCloudinaryUrl(
                             post.banner || '',
-                            'f_auto,q_auto,c_fill,w_300,dpr_auto'
+                            'f_auto,q_auto,c_fill,w_800,dpr_auto'
                         )}
                         fill
                         alt={`Cover image for ${post.title}`}
                         className='object-cover w-full h-full transition-transform duration-500 ease-out group-hover:scale-105'
                         loading={priority ? 'eager' : 'lazy'}
-                        sizes='(max-width: 640px) 100vw, 200px'
+                        sizes='(max-width: 768px) 100vw, 800px'
                         decoding='async'
                         unoptimized
                     />
@@ -95,7 +95,7 @@ const BlogPostCard: React.FC<BlogPostCardProps> = ({
                 )}
 
                 <h2
-                    className={`text-lg sm:text-xl font-bold text-slate-900 mb-1.5 leading-tight tracking-tight transition-colors duration-200 group-hover:text-blue-600 ${poppins.className}`}
+                    className={`text-lg line-clamp-2 sm:text-xl font-bold text-slate-900 mb-1.5 leading-tight tracking-tight transition-colors duration-200 group-hover:text-blue-600 ${poppins.className}`}
                 >
                     {post.title}
                 </h2>
