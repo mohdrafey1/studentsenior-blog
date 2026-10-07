@@ -1,4 +1,5 @@
 'use client';
+import { analytics } from '@/analytics';
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -56,6 +57,7 @@ function SearchResults() {
                 const data = await response.json();
                 if (data.success !== true || !Array.isArray(data.data)) throw new Error('Unexpected search response');
                 setSearchResults(data.data);
+                if (!controller.signal.aborted) analytics.track('search', { scope: 'blog', queryLength: query.trim().length });
             } catch {
                 if (controller.signal.aborted) return;
                 console.error('Search request failed');

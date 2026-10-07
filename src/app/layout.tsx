@@ -1,3 +1,4 @@
+import AnalyticsProvider from '@/analytics/AnalyticsProvider';
 import ServiceWorkerRegistration from './components/ServiceWorkerRegistration';
 import type { Metadata } from 'next';
 import { Poppins, Lora, Inter } from 'next/font/google';
@@ -55,6 +56,7 @@ export default function RootLayout({
                 className={`${poppins.variable} ${lora.variable} ${inter.variable} antialiased`}
             >
                 <ServiceWorkerRegistration />
+                <AnalyticsProvider />
                 {/* ✅ AdBlockGuard runs on client side only */}
                 <AdBlockGuard>{children}</AdBlockGuard>
 

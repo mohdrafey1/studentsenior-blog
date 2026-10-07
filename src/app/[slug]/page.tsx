@@ -1,3 +1,4 @@
+import TrackContentView from '@/analytics/TrackContentView';
 import { ArrowLeft, Calendar, User, Clock } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -300,7 +301,7 @@ function BlogPostComponent({
 
                                 {/* Share Buttons */}
                                 <div className='flex justify-start sm:justify-end'>
-                                    <SocialShareButtons />
+                                    <SocialShareButtons id={post._id} />
                                 </div>
                             </div>
 
@@ -488,6 +489,7 @@ export default async function BlogPostPage({
                     latestPosts={latestJson.data || []}
                 />
                 <ViewTracker slug={slug} />
+                <TrackContentView type="blog" id={postJson.data._id} />
             </>
         );
     } catch (error) {
