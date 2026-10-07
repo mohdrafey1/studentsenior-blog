@@ -1,7 +1,8 @@
 'use client';
 import { analytics } from '@/analytics';
+import { SearchTracker } from '@/analytics/search';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -25,9 +26,14 @@ function SearchResults() {
     const searchParams = useSearchParams();
     const query = searchParams.get('q') || '';
     const requestedPage = Number(searchParams.get('page'));
-    const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const page =
+        Number.isSafeInteger(requestedPage) && requestedPage > 0
+            ? requestedPage
+            : 1;
     const [retry, setRetry] = useState(0);
     const pageSize = 20;
+    const tracker = useRef(new SearchTracker());
+    tracker.current.update(query);
     const [searchResults, setSearchResults] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -47,7 +53,7 @@ function SearchResults() {
 
                 const response = await fetch(
                     `${api.blog.search}?q=${encodeURIComponent(query)}&page=${page}&limit=${pageSize}`,
-                    { signal: controller.signal }
+                    { signal: controller.signal },
                 );
 
                 if (!response.ok) {
@@ -55,9 +61,14 @@ function SearchResults() {
                 }
 
                 const data = await response.json();
-                if (data.success !== true || !Array.isArray(data.data)) throw new Error('Unexpected search response');
+                if (data.success !== true || !Array.isArray(data.data))
+                    throw new Error('Unexpected search response');
                 setSearchResults(data.data);
-                if (!controller.signal.aborted) analytics.track('search', { scope: 'blog', queryLength: query.trim().length });
+                if (!controller.signal.aborted) {
+                    const props = tracker.current.settleFirstPage(query, page);
+                    if (props)
+                        analytics.track('search', { scope: 'blog', ...props });
+                }
             } catch {
                 if (controller.signal.aborted) return;
                 console.error('Search request failed');
@@ -97,8 +108,16 @@ function SearchResults() {
 
             {error && (
                 <div className='bg-red-50 border-l-4 border-red-500 p-4 mb-6'>
-                    <p className='text-red-700' role='alert'>{error}</p>
-                    <button type='button' className='mt-2 rounded border px-3 py-2' onClick={() => setRetry(value => value + 1)}>Try again</button>
+                    <p className='text-red-700' role='alert'>
+                        {error}
+                    </p>
+                    <button
+                        type='button'
+                        className='mt-2 rounded border px-3 py-2'
+                        onClick={() => setRetry((value) => value + 1)}
+                    >
+                        Try again
+                    </button>
                 </div>
             )}
 
@@ -122,10 +141,27 @@ function SearchResults() {
             )}
 
             {!isLoading && !error && query.trim() && (
-                <nav aria-label='Search result pages' className='mb-6 flex items-center gap-4'>
-                    {page > 1 && <Link href={`/search?q=${encodeURIComponent(query)}&page=${page - 1}`} className='rounded border px-3 py-2'>Previous</Link>}
+                <nav
+                    aria-label='Search result pages'
+                    className='mb-6 flex items-center gap-4'
+                >
+                    {page > 1 && (
+                        <Link
+                            href={`/search?q=${encodeURIComponent(query)}&page=${page - 1}`}
+                            className='rounded border px-3 py-2'
+                        >
+                            Previous
+                        </Link>
+                    )}
                     <span>Page {page}</span>
-                    {searchResults.length === pageSize && <Link href={`/search?q=${encodeURIComponent(query)}&page=${page + 1}`} className='rounded border px-3 py-2'>Next</Link>}
+                    {searchResults.length === pageSize && (
+                        <Link
+                            href={`/search?q=${encodeURIComponent(query)}&page=${page + 1}`}
+                            className='rounded border px-3 py-2'
+                        >
+                            Next
+                        </Link>
+                    )}
                 </nav>
             )}
             <div className='grid gap-6 md:grid-cols-2 lg:grid-cols-3'>
@@ -141,7 +177,7 @@ function SearchResults() {
                                 <Image
                                     src={optimizeCloudinaryUrl(
                                         post.banner || '',
-                                        'f_auto,q_auto,c_fill,w_300,dpr_auto'
+                                        'f_auto,q_auto,c_fill,w_300,dpr_auto',
                                     )}
                                     alt={post.title}
                                     fill

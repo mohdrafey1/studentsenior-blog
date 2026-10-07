@@ -35,17 +35,24 @@ export interface SavedQueue {
     identity: string | null;
     events: AnalyticsEvent[];
 }
+export interface SessionState {
+    sessionId: string;
+    lastActiveAt: number;
+}
 interface Options {
     anonId: string;
     platform: Batch['platform'];
     isNewInstall?: boolean;
     waitForIdentity?: boolean;
     restored?: SavedQueue;
+    readSession?: () => SessionState | undefined;
+    writeSession?: (session: SessionState) => void;
     now?: () => number;
     id?: () => string;
     persist: (value: SavedQueue) => void | Promise<void>;
     send: (
         batch: Batch,
+        signal: AbortSignal,
     ) => Promise<{ status: number; retryAfter?: string | null }>;
     beacon?: (body: string) => boolean;
 }
@@ -228,6 +235,12 @@ export class AnalyticsQueue {
     private nextAttempt = 0;
     private flight: Promise<boolean> | null = null;
     private writes = Promise.resolve();
+    private dirty = false;
+    private persistTimer?: ReturnType<typeof setTimeout>;
+    private persistedAt = 0;
+    private lastActiveAt: number;
+    private flightController: AbortController | null = null;
+    private restoredIds = new Set<string>();
     private paused = false;
     private identityReady: boolean;
     private now: () => number;
@@ -237,8 +250,18 @@ export class AnalyticsQueue {
         this.id = options.id || randomId;
         this.identity = options.restored?.identity || null;
         this.identityReady = !options.waitForIdentity;
-        this.sessionId = this.id();
+        const savedSession = options.readSession?.();
+        const reusable =
+            savedSession &&
+            token.test(savedSession.sessionId) &&
+            Number.isFinite(savedSession.lastActiveAt) &&
+            savedSession.lastActiveAt <= this.now() &&
+            this.now() - savedSession.lastActiveAt < 1800000;
+        this.sessionId = reusable ? savedSession.sessionId : this.id();
+        this.lastActiveAt = this.now();
+        this.saveSession();
         this.enteredAt = this.now();
+        this.persistedAt = this.now();
         this.activeSince = this.now();
         // Treat browser storage as untrusted and rebuild the strict envelope.
         for (const value of (options.restored?.events || []).slice(-500)) {
@@ -250,7 +273,8 @@ export class AnalyticsQueue {
                 typeof value.sessionId !== 'string' ||
                 !token.test(value.sessionId) ||
                 typeof value.ts !== 'string' ||
-                !Number.isFinite(Date.parse(value.ts))
+                !Number.isFinite(Date.parse(value.ts)) ||
+                this.events.some((event) => event.eventId === value.eventId)
             )
                 continue;
             const props = safeProps(value.name, value.props || {});
@@ -273,10 +297,12 @@ export class AnalyticsQueue {
                     : {}),
             });
         }
-        this.track('session_start', {
-            isNewInstall: !!options.isNewInstall,
-            launchSource: 'unknown',
-        });
+        this.restoredIds = new Set(this.events.map((event) => event.eventId));
+        if (!reusable)
+            this.track('session_start', {
+                isNewInstall: !!options.isNewInstall,
+                launchSource: 'unknown',
+            });
     }
     get snapshot(): SavedQueue {
         return { identity: this.identity, events: [...this.events] };
@@ -285,16 +311,62 @@ export class AnalyticsQueue {
         return this.sessionId;
     }
     private persist() {
-        const snapshot = this.snapshot;
+        this.dirty = true;
+        if (this.persistTimer) return;
+        this.persistTimer = setTimeout(
+            () => {
+                this.persistTimer = undefined;
+                void this.flushPersistence();
+            },
+            Math.max(1, 1000 - (this.now() - this.persistedAt)),
+        );
+        this.persistTimer.unref?.();
+    }
+    flushPersistence(): Promise<void> {
+        clearTimeout(this.persistTimer);
+        this.persistTimer = undefined;
         this.writes = this.writes
             .catch(() => undefined)
-            .then(() => this.options.persist(snapshot))
+            .then(async () => {
+                if (!this.dirty) return;
+                this.dirty = false;
+                this.persistedAt = this.now();
+                await this.options.persist(this.snapshot);
+            })
             .catch(() => undefined);
+        return this.writes;
+    }
+    private saveSession() {
+        this.options.writeSession?.({
+            sessionId: this.sessionId,
+            lastActiveAt: this.lastActiveAt,
+        });
+    }
+    /** Heartbeats do not count as interaction: an idle visible tab can expire. */
+    activity(): void {
+        if (this.paused) return;
+        const shared = this.options.readSession?.();
+        if (
+            shared &&
+            token.test(shared.sessionId) &&
+            Number.isFinite(shared.lastActiveAt) &&
+            shared.lastActiveAt <= this.now()
+        ) {
+            this.sessionId = shared.sessionId;
+            this.lastActiveAt = Math.max(
+                this.lastActiveAt,
+                shared.lastActiveAt,
+            );
+        }
+        if (this.now() - this.lastActiveAt >= 1800000) this.rotate();
+        this.lastActiveAt = this.now();
+        this.saveSession();
     }
     track(name: string, input: Record<string, unknown> = {}): void {
         if (this.paused) return;
         const props = safeProps(name, input);
         if (!props) return;
+        if (name !== 'heartbeat' && name !== 'session_start') this.activity();
         this.events.push({
             eventId: this.id(),
             anonId: this.options.anonId,
@@ -313,6 +385,7 @@ export class AnalyticsQueue {
         if (!screenPattern.test(template) || template.length > 160) return;
         this.college =
             college && /^[a-z\d-]{1,100}$/.test(college) ? college : undefined;
+        this.activity();
         if (routeKey === this.routeKey) return;
         const prevDurationMs = this.route
             ? Math.min(1800000, Math.max(0, this.now() - this.enteredAt))
@@ -324,6 +397,17 @@ export class AnalyticsQueue {
     }
     heartbeat(): void {
         if (this.activeSince === null || this.paused) return;
+        const shared = this.options.readSession?.();
+        const lastActivity = Math.max(
+            this.lastActiveAt,
+            shared?.lastActiveAt || 0,
+        );
+        if (this.now() - lastActivity >= 1800000) {
+            this.activeSince = this.now();
+            return;
+        }
+        if (shared && token.test(shared.sessionId))
+            this.sessionId = shared.sessionId;
         const sec = Math.min(
             30,
             Math.max(0, (this.now() - this.activeSince) / 1000),
@@ -337,16 +421,18 @@ export class AnalyticsQueue {
         this.activeSince = null;
         this.hiddenAt = this.now();
         this.flushBeacon();
+        void this.flushPersistence();
     }
     show(): void {
-        if (this.hiddenAt !== null && this.now() - this.hiddenAt >= 1800000)
-            this.rotate();
+        this.activity();
         this.hiddenAt = null;
         this.activeSince = this.now();
         void this.flush();
     }
     private rotate() {
         this.sessionId = this.id();
+        this.lastActiveAt = this.now();
+        this.saveSession();
         this.enteredAt = this.now();
         this.activeSince = this.hiddenAt === null ? this.now() : null;
         this.track('session_start', {
@@ -373,19 +459,24 @@ export class AnalyticsQueue {
         if (
             !this.identityReady ||
             (!force && this.paused) ||
-            this.now() < this.nextAttempt
+            (!force && this.now() < this.nextAttempt)
         )
             return Promise.resolve(false);
         if (!this.events.length) return Promise.resolve(true);
-        this.flight = this.sendAll().finally(() => {
-            this.flight = null;
+        const controller = new AbortController();
+        this.flightController = controller;
+        this.flight = this.sendAll(controller.signal).finally(() => {
+            if (this.flightController === controller) {
+                this.flight = null;
+                this.flightController = null;
+            }
         });
         return this.flight;
     }
-    private async sendAll(): Promise<boolean> {
+    private async sendAll(signal: AbortSignal): Promise<boolean> {
         // Bound a drain to the existing queue, even when new events arrive during transport.
         let remaining = this.events.length;
-        while (this.events.length && remaining > 0) {
+        while (this.events.length && remaining > 0 && !signal.aborted) {
             const batch = this.batch();
             if (!batch.events.length) {
                 this.events.shift();
@@ -394,7 +485,8 @@ export class AnalyticsQueue {
             }
             remaining -= batch.events.length;
             try {
-                const result = await this.options.send(batch);
+                const result = await this.options.send(batch, signal);
+                if (signal.aborted) return false;
                 if (
                     (result.status >= 200 && result.status < 300) ||
                     result.status === 400 ||
@@ -420,6 +512,7 @@ export class AnalyticsQueue {
                     return false;
                 }
             } catch {
+                if (signal.aborted) return false;
                 this.nextAttempt =
                     this.now() + retryDelay(null, this.now(), ++this.failures);
                 return false;
@@ -437,10 +530,17 @@ export class AnalyticsQueue {
             return false;
         const batch = this.batch();
         if (!batch.events.length) return false;
-        // Even accepted beacons remain queued: only an HTTP acknowledgement removes them.
-        // Stable IDs let the API deduplicate a beacon that arrived before a later retry.
         try {
-            return this.options.beacon?.(JSON.stringify(batch)) || false;
+            const accepted =
+                this.options.beacon?.(JSON.stringify(batch)) || false;
+            if (accepted) {
+                const ids = new Set(batch.events.map((event) => event.eventId));
+                this.events = this.events.filter(
+                    (event) => !ids.has(event.eventId),
+                );
+                this.persist();
+            }
+            return accepted;
         } catch {
             return false;
         }
@@ -448,33 +548,96 @@ export class AnalyticsQueue {
     async prepareIdentityChange(): Promise<void> {
         this.heartbeat();
         this.paused = true;
-        if (this.flight) await this.flight;
-        await this.flush(true);
-        // An unacknowledged old-account batch must never use the next account's cookie.
+        let expired = false;
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        const drain = async () => {
+            if (this.flight) await this.flight;
+            if (!expired) await this.flush(true);
+        };
+        await Promise.race([
+            drain(),
+            new Promise<void>((resolve) => {
+                timeout = setTimeout(() => {
+                    expired = true;
+                    this.flightController?.abort();
+                    this.flightController = null;
+                    this.flight = null;
+                    resolve();
+                }, 1500);
+            }),
+        ]);
+        clearTimeout(timeout);
+        // Old-cookie requests are aborted before auth changes; their callbacks cannot retry.
         this.events = [];
+        this.failures = 0;
+        this.nextAttempt = 0;
         this.persist();
-        await this.writes;
+        void this.flushPersistence();
     }
-    identify(identity: string | null): void {
+    identify(identity: string | null, sharedChange = false): void {
         if (!this.identityReady) {
-            // Newly captured cold-start events use the current cookie; restored events
-            // may belong to a different account and must wait for the auth check.
-            if (identity !== this.identity)
+            const changed = identity !== this.identity;
+            if (changed)
                 this.events = this.events.filter(
-                    (event) => event.sessionId === this.sessionId,
+                    (event) => !this.restoredIds.has(event.eventId),
                 );
             this.identity = identity;
             this.identityReady = true;
             this.paused = false;
+            if (changed) {
+                const fresh = this.events;
+                const shared = sharedChange
+                    ? this.options.readSession?.()
+                    : undefined;
+                if (
+                    shared &&
+                    token.test(shared.sessionId) &&
+                    this.now() - shared.lastActiveAt < 1800000
+                ) {
+                    this.sessionId = shared.sessionId;
+                    this.lastActiveAt = shared.lastActiveAt;
+                    this.events = fresh.filter(
+                        (event) => event.name !== 'session_start',
+                    );
+                } else {
+                    this.events = [];
+                    this.rotate();
+                    // Reuse a buffered cold-start event instead of counting two starts.
+                    if (fresh.some((event) => event.name === 'session_start'))
+                        this.events = fresh;
+                    else this.events.push(...fresh.slice(-499));
+                }
+                this.events = this.events.map((event) => ({
+                    ...event,
+                    sessionId: this.sessionId,
+                }));
+            }
             this.persist();
             return;
         }
         const changed = identity !== this.identity;
-        if (changed) this.events = [];
+        if (changed) {
+            this.flightController?.abort();
+            this.flightController = null;
+            this.flight = null;
+            this.events = [];
+        }
         this.identity = identity;
         const wasPaused = this.paused;
         this.paused = false;
-        if (changed || wasPaused) this.rotate();
+        if (changed || wasPaused) {
+            const shared = sharedChange
+                ? this.options.readSession?.()
+                : undefined;
+            if (
+                shared &&
+                token.test(shared.sessionId) &&
+                this.now() - shared.lastActiveAt < 1800000
+            ) {
+                this.sessionId = shared.sessionId;
+                this.lastActiveAt = shared.lastActiveAt;
+            } else this.rotate();
+        }
         this.persist();
     }
     reset(): void {
@@ -483,6 +646,14 @@ export class AnalyticsQueue {
     cancelIdentityChange(): void {
         this.paused = false;
         this.activeSince = this.hiddenAt === null ? this.now() : null;
+    }
+}
+
+function safeDecode(value: string): string {
+    try {
+        return decodeURIComponent(value);
+    } catch {
+        return value;
     }
 }
 
@@ -504,19 +675,22 @@ export function routeTemplate(
             const matches = values.every((part, offset) => {
                 try {
                     return (
-                        decodeURIComponent(segments[index + offset] || '') ===
-                        part
+                        !/^\[.*\]$/.test(segments[index + offset] || '') &&
+                        safeDecode(segments[index + offset] || '') ===
+                            safeDecode(part)
                     );
                 } catch {
                     return false;
                 }
             });
-            if (values.length && matches)
+            if (values.length && matches) {
                 segments.splice(
                     index,
                     values.length,
                     `[${Array.isArray(value) ? '...' : ''}${name}]`,
                 );
+                break;
+            }
         }
     }
     // Unknown encoded/private segments on error routes are never emitted as raw paths.

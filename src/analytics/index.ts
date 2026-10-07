@@ -1,12 +1,14 @@
 'use client';
 
-import { AnalyticsQueue, randomId, type SavedQueue } from './core';
+import { AnalyticsQueue, randomId } from './core';
+import { tabStorage } from './browserStorage';
+import { sendBatch } from './transport';
 const PLATFORM = 'blog' as const;
 const ANON_KEY = 'ss_analytics_anon';
 const QUEUE_KEY = `ss_analytics_queue_${PLATFORM}`;
-const IDENTITY_KEY = `ss_analytics_identity_${PLATFORM}`;
 let client: AnalyticsQueue | undefined;
 let stop: (() => void) | undefined;
+let persistence: ReturnType<typeof tabStorage> | undefined;
 
 export function browserIdentity(
     storage: Pick<Storage, 'getItem' | 'setItem'> | undefined,
@@ -56,55 +58,16 @@ function getClient(): AnalyticsQueue | undefined {
         document.cookie =
             value + (location.protocol === 'https:' ? '; Secure' : '');
     });
-    let restored: SavedQueue | undefined;
-    try {
-        const value = JSON.parse(storage?.getItem(QUEUE_KEY) || 'null');
-        if (
-            value &&
-            Array.isArray(value.events) &&
-            (value.identity === null || typeof value.identity === 'string')
-        )
-            restored = value;
-    } catch {
-        /* Ignore corrupt or unavailable persistence. */
-    }
+    persistence = tabStorage(storage, QUEUE_KEY, null);
     const endpoint = `${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v2').replace(/\/+$/, '')}/events`;
     client = new AnalyticsQueue({
         ...identity,
         platform: PLATFORM,
-        restored,
-        waitForIdentity: false,
-        persist: (value) => {
-            try {
-                storage?.setItem(QUEUE_KEY, JSON.stringify(value));
-            } catch {
-                /* Quota exhaustion cannot interrupt user actions. */
-            }
-        },
-        send: async (batch) => {
-            const controller = new AbortController();
-            const timeout = window.setTimeout(() => controller.abort(), 5000);
-            try {
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    credentials: 'include',
-                    keepalive: true,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Platform': PLATFORM,
-                        'X-Anon-Id': identity.anonId,
-                    },
-                    body: JSON.stringify(batch),
-                    signal: controller.signal,
-                });
-                return {
-                    status: response.status,
-                    retryAfter: response.headers.get('Retry-After'),
-                };
-            } finally {
-                window.clearTimeout(timeout);
-            }
-        },
+        restored: persistence.restored,
+        readSession: persistence.readSession,
+        writeSession: persistence.writeSession,
+        persist: persistence.persist,
+        send: (batch, signal) => sendBatch(endpoint, batch, signal),
         beacon: (body) =>
             typeof navigator.sendBeacon === 'function' &&
             navigator.sendBeacon(
@@ -120,67 +83,56 @@ export const analytics = {
         getClient()?.track(name, props);
     },
     screen(template: string, college?: string, routeKey?: string) {
-        getClient()?.screen(template, college, routeKey);
+        getClient()?.screen(template, undefined, routeKey);
     },
     flush() {
         return getClient()?.flush() || Promise.resolve(true);
-    },
-    prepareIdentityChange() {
-        return getClient()?.prepareIdentityChange() || Promise.resolve();
-    },
-    identify(id: string | null) {
-        getClient()?.identify(id);
-        try {
-            localStorage.setItem(IDENTITY_KEY, JSON.stringify(id));
-        } catch {
-            /* Optional cross-tab guard. */
-        }
-    },
-    reset() {
-        this.identify(null);
-    },
-    cancelIdentityChange() {
-        getClient()?.cancelIdentityChange();
     },
     start() {
         const queue = getClient();
         if (!queue || stop) return () => undefined;
         const visibility = () =>
             document.visibilityState === 'hidden' ? queue.hide() : queue.show();
-        const hidden = () => queue.hide();
+        const hidden = () => {
+            queue.hide();
+            void queue.flushPersistence().then(() => persistence?.release());
+        };
         const visible = () => {
-            if (document.visibilityState !== 'hidden') queue.show();
+            if (document.visibilityState !== 'hidden') {
+                persistence?.renew();
+                queue.show();
+            }
         };
         const online = () => {
             void queue.flush();
         };
-        const identityChanged = (event: StorageEvent) => {
-            if (event.key !== IDENTITY_KEY) return;
-            try {
-                const identity = JSON.parse(event.newValue || 'null');
-                if (identity === null || typeof identity === 'string')
-                    queue.identify(identity);
-            } catch {
-                /* Ignore malformed external storage. */
-            }
-        };
+        const interaction = () => queue.activity();
         const timer = window.setInterval(() => {
+            persistence?.renew();
             if (document.visibilityState !== 'hidden') queue.heartbeat();
             void queue.flush();
         }, 30000);
+        for (const event of ['pointerdown', 'keydown', 'scroll', 'touchstart'])
+            document.addEventListener(event, interaction, { passive: true });
         document.addEventListener('visibilitychange', visibility);
         window.addEventListener('pagehide', hidden);
         window.addEventListener('pageshow', visible);
         window.addEventListener('online', online);
-        window.addEventListener('storage', identityChanged);
         if (document.visibilityState === 'hidden') queue.hide();
         stop = () => {
             window.clearInterval(timer);
+            for (const event of [
+                'pointerdown',
+                'keydown',
+                'scroll',
+                'touchstart',
+            ])
+                document.removeEventListener(event, interaction);
+            void queue.flushPersistence();
             document.removeEventListener('visibilitychange', visibility);
             window.removeEventListener('pagehide', hidden);
             window.removeEventListener('pageshow', visible);
             window.removeEventListener('online', online);
-            window.removeEventListener('storage', identityChanged);
             stop = undefined;
         };
         return stop;

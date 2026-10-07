@@ -55,7 +55,7 @@ test('track is synchronous, persistence is deferred and queue drops oldest at 50
         queue.track('search', { scope: 'pyq', queryLength: index });
     assert.equal(queue.snapshot.events.length, 500);
     assert.equal(queue.snapshot.events[0].props.queryLength, 100);
-    await new Promise((resolve) => setImmediate(resolve));
+    await queue.flushPersistence();
     assert.equal(writes.at(-1).events.length, 500);
 });
 test('flush sends maximum 50 events, drains, stamps actual send time and keeps stable IDs', async () => {
@@ -129,7 +129,7 @@ for (const status of [400, 413, 503])
         await queue.flush();
         assert.equal(queue.snapshot.events.length, status === 503 ? 1 : 0);
     });
-test('false and accepted beacon both retain stable IDs until acknowledged', () => {
+test('rejected beacon retains IDs and accepted beacon removes only its batch', () => {
     for (const accepted of [false, true]) {
         let body;
         const { queue } = fixture({
@@ -148,7 +148,7 @@ test('false and accepted beacon both retain stable IDs until acknowledged', () =
         assert.equal(JSON.parse(body).events.length, 50);
         assert.deepEqual(
             queue.snapshot.events.map((event) => event.eventId),
-            ids,
+            accepted ? ids.slice(50) : ids,
         );
     }
 });
@@ -181,7 +181,7 @@ test('identity change flushes old auth, pauses new events, drops failure and rot
     assert.ok(queue.snapshot.events.every((event) => event.anonId === anonId));
     assert.equal(queue.snapshot.identity, null);
 });
-test('same-account re-login rotates and auth transition does not bypass Retry-After', async () => {
+test('same-account re-login rotates and forced auth flush bypasses Retry-After', async () => {
     let calls = 0;
     const { queue } = fixture({
         send: async () => {
@@ -194,7 +194,7 @@ test('same-account re-login rotates and auth transition does not bypass Retry-Af
     await queue.flush();
     await queue.prepareIdentityChange();
     queue.identify('account');
-    assert.equal(calls, 1);
+    assert.equal(calls, 2);
     assert.notEqual(queue.session, before);
 });
 test('startup waits for verified identity and drops only another account restored events', async () => {
@@ -239,7 +239,7 @@ test('restored queue for the same verified identity retries previous event IDs',
         ),
     );
 });
-test('serialized writes cannot restore an older snapshot over a new queue', async () => {
+test('serialized persistence coalesces pending changes into the latest snapshot', async () => {
     let finish;
     const writes = [];
     const { queue } = fixture({
@@ -251,12 +251,13 @@ test('serialized writes cannot restore an older snapshot over a new queue', asyn
             writes.push(value);
         },
     });
-    await Promise.resolve();
+    const first = queue.flushPersistence();
+    await new Promise((resolve) => setImmediate(resolve));
     queue.track('share', { type: 'note', id: contentId });
-    await Promise.resolve();
+    const latest = queue.flushPersistence();
     assert.equal(writes.length, 0);
     finish();
-    await new Promise((resolve) => setImmediate(resolve));
+    await Promise.all([first, latest]);
     assert.equal(writes.at(-1).events.length, 2);
 });
 test('heartbeats cap foreground seconds and final hide emits once; 30 minute hidden rotates', () => {
@@ -273,7 +274,7 @@ test('heartbeats cap foreground seconds and final hide emits once; 30 minute hid
         [30, 12.345],
     );
     const session = queue.session;
-    advance(1799999);
+    advance(1700000);
     queue.show();
     assert.equal(queue.session, session);
     queue.hide();
@@ -288,7 +289,9 @@ test('screen duration is capped and dynamic item changes with same template emit
         'college',
         '/college/notes/first-private-title',
     );
-    advance(1900000);
+    advance(1700000);
+    queue.activity();
+    advance(200000);
     queue.screen(
         '/[slug]/notes/[note-slug]',
         'college',
@@ -459,7 +462,7 @@ test('browser adapter sends credentialed keepalive requests and text/plain hidde
     try {
         const { analytics } = require('../src/analytics/index.ts');
         const stop = analytics.start();
-        analytics.identify(null);
+        analytics.identify?.(null);
         analytics.track('content_view', { type: 'blog', id: contentId });
         await analytics.flush();
         const request = requests[0];
@@ -471,7 +474,9 @@ test('browser adapter sends credentialed keepalive requests and text/plain hidde
         assert.equal(request.options.credentials, 'include');
         assert.equal(request.options.keepalive, true);
         assert.equal(JSON.parse(request.options.body).platform, platform);
-        assert.equal(request.options.headers['X-Platform'], platform);
+        assert.deepEqual(request.options.headers, {
+            'Content-Type': 'text/plain',
+        });
         assert.match(document.cookie, /Max-Age=31536000/);
         assert.match(document.cookie, /Secure/);
         analytics.track('share', { type: 'blog', id: contentId });
@@ -494,4 +499,370 @@ test('browser adapter sends credentialed keepalive requests and text/plain hidde
             else delete globalThis[key];
         }
     }
+});
+
+const { tabStorage } = require('../src/analytics/browserStorage.ts');
+const { sendBatch } = require('../src/analytics/transport.ts');
+const { SearchTracker } = require('../src/analytics/search.ts');
+const { shareAndTrack } = require('../src/analytics/share.ts');
+function memoryStorage() {
+    const values = new Map();
+    return {
+        get length() {
+            return values.size;
+        },
+        key: (index) => [...values.keys()][index] || null,
+        getItem: (key) => values.get(key) || null,
+        setItem: (key, value) => values.set(key, value),
+        removeItem: (key) => values.delete(key),
+    };
+}
+test('session survives reload/new tab; visible idle expires, heartbeats never extend activity', () => {
+    let now = 10000000,
+        session;
+    let count = 0;
+    const options = {
+        now: () => now,
+        id: () => String(++count).padStart(32, '0'),
+        readSession: () => session,
+        writeSession: (value) => {
+            session = value;
+        },
+        waitForIdentity: true,
+    };
+    const a = fixture(options).queue;
+    now += 1000;
+    const b = fixture(options).queue;
+    assert.equal(a.session, b.session);
+    assert.equal(b.snapshot.events.length, 0);
+    for (let n = 0; n < 60; n++) {
+        now += 30000;
+        b.heartbeat();
+    }
+    const previous = b.session;
+    b.activity();
+    assert.notEqual(b.session, previous);
+    assert.equal(
+        b.snapshot.events.filter((e) => e.name === 'session_start').length,
+        1,
+    );
+    a.activity();
+    assert.equal(a.session, b.session);
+    assert.equal(
+        a.snapshot.events.filter((e) => e.name === 'session_start').length,
+        1,
+    );
+});
+test('login in one tab rotates once and the other tab adopts the shared session', () => {
+    let session,
+        count = 0;
+    const options = {
+        readSession: () => session,
+        writeSession: (value) => {
+            session = value;
+        },
+        id: () => String(++count).padStart(32, '0'),
+    };
+    const a = fixture(options).queue;
+    const b = fixture(options).queue;
+    a.identify('account');
+    b.identify('account', true);
+    assert.equal(a.session, b.session);
+    assert.equal(
+        b.snapshot.events.filter((e) => e.name === 'session_start').length,
+        0,
+    );
+});
+test('route params decode both sides and consume only the first matching segment', () => {
+    assert.equal(
+        routeTemplate(
+            '/college/notes/hello%20world',
+            { slug: 'college', note: 'hello%20world' },
+            ['notes'],
+        ),
+        '/[slug]/notes/[note]',
+    );
+    assert.equal(
+        routeTemplate(
+            '/x/resources/bca/bca',
+            { slug: 'x', courseCode: 'bca' },
+            ['resources'],
+        ),
+        '/[slug]/resources/[courseCode]/[unknown]',
+    );
+    assert.equal(
+        routeTemplate('/x/a/a', { first: 'a', second: 'a', slug: 'x' }),
+        '/[slug]/[first]/[second]',
+    );
+    assert.equal(
+        routeTemplate('/a%20b/c%2Bd', { slug: ['a%20b', 'c+d'] }),
+        '/[...slug]',
+    );
+});
+test('live tabs keep independent queues; dead queues merge once by eventId and cap oldest at 500', () => {
+    let now = 1000;
+    const storage = memoryStorage();
+    const a = tabStorage(storage, 'queue', null, () => now, 'aaaaaaaa');
+    const event = { eventId: 'event0001', ts: new Date(now).toISOString() };
+    a.persist({ identity: null, events: [event] });
+    const b = tabStorage(storage, 'queue', null, () => now, 'bbbbbbbb');
+    assert.equal(b.restored.events.length, 0);
+    b.persist({
+        identity: null,
+        events: [
+            event,
+            { eventId: 'event0002', ts: new Date(now).toISOString() },
+        ],
+    });
+    now += 90001;
+    const c = tabStorage(storage, 'queue', null, () => now, 'cccccccc');
+    assert.deepEqual(
+        c.restored.events.map((e) => e.eventId),
+        ['event0001', 'event0002'],
+    );
+    assert.equal(storage.getItem(a.key), null);
+    assert.equal(storage.getItem(b.key), null);
+    const d = tabStorage(storage, 'queue', null, () => now, 'dddddddd');
+    assert.equal(d.restored.events.length, 0);
+    c.persist({
+        identity: null,
+        events: Array.from({ length: 550 }, (_, i) => ({
+            eventId: `event${i}`,
+            ts: new Date(i).toISOString(),
+        })),
+    });
+    c.release();
+    const e = tabStorage(storage, 'queue', null, () => now, 'eeeeeeee');
+    assert.equal(e.restored.events.length, 500);
+    assert.equal(e.restored.events[0].eventId, 'event50');
+});
+test('per-tab recovery discards another identity and session state persists across tabs', () => {
+    const storage = memoryStorage();
+    const a = tabStorage(storage, 'queue', 'old', () => 1000, 'aaaaaaaa');
+    a.persist({
+        identity: 'old',
+        events: [{ eventId: 'event0001', ts: new Date(1).toISOString() }],
+    });
+    a.writeSession({ sessionId: 'session1', lastActiveAt: 1000 });
+    a.release();
+    const b = tabStorage(storage, 'queue', 'new', () => 1001, 'bbbbbbbb');
+    assert.equal(b.restored.events.length, 0);
+    assert.deepEqual(b.readSession(), {
+        sessionId: 'session1',
+        lastActiveAt: 1000,
+    });
+});
+test('persistence writes at most once per second and hide persists the latest queue', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const { queue, writes, advance } = fixture({ waitForIdentity: true });
+    queue.track('search', { scope: 'pyq', queryLength: 3 });
+    t.mock.timers.tick(999);
+    await Promise.resolve();
+    assert.equal(writes.length, 0);
+    advance(1000);
+    t.mock.timers.tick(1);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(writes.length, 1);
+    queue.track('search', { scope: 'pyq', queryLength: 4 });
+    t.mock.timers.tick(999);
+    await Promise.resolve();
+    assert.equal(writes.length, 1);
+    queue.hide();
+    await queue.flushPersistence();
+    assert.equal(writes.length, 2);
+    assert.ok(writes[1].events.some((e) => e.props.queryLength === 4));
+});
+test('identity flush has one 1.5 second deadline, aborts transport and cannot retry with next auth', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let signal,
+        finish,
+        calls = 0;
+    const { queue } = fixture({
+        send: async (_batch, input) => {
+            signal = input;
+            calls++;
+            return new Promise((resolve) => {
+                finish = resolve;
+            });
+        },
+    });
+    const flight = queue.flush();
+    const changing = queue.prepareIdentityChange();
+    t.mock.timers.tick(1500);
+    await changing;
+    assert.equal(signal.aborted, true);
+    assert.equal(queue.snapshot.events.length, 0);
+    queue.identify('next-account');
+    finish({ status: 503 });
+    await flight;
+    assert.equal(calls, 1);
+    assert.equal(queue.snapshot.events[0].name, 'session_start');
+});
+test('fetch transport is safelisted and obeys the identity abort signal', async () => {
+    const original = global.fetch;
+    let request;
+    global.fetch = async (_url, options) => {
+        request = options;
+        return new Promise((_resolve, reject) =>
+            options.signal.addEventListener('abort', () =>
+                reject(new Error('aborted')),
+            ),
+        );
+    };
+    try {
+        const controller = new AbortController();
+        const sent = sendBatch(
+            '/events',
+            { platform: 'web', sent: new Date().toISOString(), events: [] },
+            controller.signal,
+        );
+        assert.deepEqual(request.headers, { 'Content-Type': 'text/plain' });
+        assert.equal(request.keepalive, true);
+        controller.abort();
+        await assert.rejects(sent, /aborted/);
+        assert.equal(request.signal.aborted, true);
+    } finally {
+        global.fetch = original;
+    }
+});
+test('search sends one settled total per query, ignores pagination, filters and stale responses', () => {
+    const tracker = new SearchTracker();
+    tracker.update('math');
+    assert.deepEqual(tracker.settle('math', 137), {
+        queryLength: 4,
+        resultCount: 137,
+    });
+    assert.equal(tracker.settle('math', 15), null);
+    tracker.update('science');
+    assert.equal(tracker.settle('math', 137), null);
+    assert.deepEqual(tracker.settle('science', 50), {
+        queryLength: 7,
+        resultCount: 50,
+    });
+    tracker.update('');
+    tracker.update('math');
+    assert.ok(tracker.settle('math', 137));
+    const sharedLink = new SearchTracker('calculator', true);
+    assert.equal(sharedLink.settle('calculator', 2), null);
+    sharedLink.update('books');
+    assert.deepEqual(sharedLink.settle('books', 20), {
+        queryLength: 5,
+        resultCount: 20,
+    });
+});
+test('native share records only after resolution and never after cancellation/failure', async () => {
+    let count = 0,
+        resolve;
+    const pending = shareAndTrack(
+        () =>
+            new Promise((done) => {
+                resolve = done;
+            }),
+        () => count++,
+    );
+    assert.equal(count, 0);
+    resolve();
+    await pending;
+    assert.equal(count, 1);
+    await assert.rejects(
+        shareAndTrack(
+            async () => {
+                throw new DOMException('Cancelled', 'AbortError');
+            },
+            () => count++,
+        ),
+    );
+    assert.equal(count, 1);
+});
+test('blog search tracks only the first results page once for each query', () => {
+    const tracker = new SearchTracker('exam');
+    assert.equal(tracker.settleFirstPage('exam', 2), null);
+    assert.deepEqual(tracker.settleFirstPage('exam', 1), { queryLength: 4 });
+    assert.equal(tracker.settleFirstPage('exam', 1), null);
+    tracker.update('college');
+    assert.equal(tracker.settleFirstPage('college', 3), null);
+    assert.deepEqual(tracker.settleFirstPage('college', 1), { queryLength: 7 });
+});
+test('settled search uses API totalItems or total, never current page length', () => {
+    const { searchTotal } = require('../src/analytics/search.ts');
+    const response = {
+        data: {
+            notes: Array(20),
+            pagination: { currentPage: 2, totalItems: 137, totalPages: 7 },
+        },
+    };
+    assert.equal(searchTotal(response.data.pagination), 137);
+    assert.equal(searchTotal({ total: 155, totalItems: 137 }), 155);
+    assert.equal(searchTotal(42), 42);
+    assert.equal(searchTotal({ currentPage: 1 }), undefined);
+});
+test('initial auth mismatch rotates the restored session and rebinds buffered views without changing IDs', () => {
+    let shared = {
+        sessionId: 'old_session_1234',
+        lastActiveAt: Date.parse('2026-10-07T10:00:00Z'),
+    };
+    const { queue } = fixture({
+        waitForIdentity: true,
+        restored: { identity: 'old-account', events: [] },
+        readSession: () => shared,
+        writeSession: (value) => {
+            shared = value;
+        },
+    });
+    queue.screen('/pyqs');
+    const id = queue.snapshot.events[0].eventId;
+    queue.identify('new-account');
+    assert.notEqual(queue.session, 'old_session_1234');
+    const view = queue.snapshot.events.find(
+        (event) => event.name === 'screen_view',
+    );
+    assert.equal(view.eventId, id);
+    assert.equal(view.sessionId, queue.session);
+    assert.equal(
+        queue.snapshot.events.filter((event) => event.name === 'session_start')
+            .length,
+        1,
+    );
+});
+test('initial auth mismatch preserves one cold-start event and adopts another tab rotation without duplicating it', () => {
+    const { queue } = fixture({ waitForIdentity: true });
+    const first = queue.snapshot.events[0].eventId;
+    queue.identify('account');
+    assert.equal(queue.snapshot.events.length, 1);
+    assert.equal(queue.snapshot.events[0].eventId, first);
+    let shared = {
+        sessionId: 'old_session_1234',
+        lastActiveAt: Date.parse('2026-10-07T10:00:00Z'),
+    };
+    const pending = fixture({
+        waitForIdentity: true,
+        readSession: () => shared,
+        writeSession: (value) => {
+            shared = value;
+        },
+    }).queue;
+    pending.screen('/pyqs');
+    shared = { ...shared, sessionId: 'another_tab_new_session' };
+    pending.identify('account', true);
+    assert.equal(pending.session, shared.sessionId);
+    assert.equal(pending.snapshot.events.length, 1);
+    assert.equal(pending.snapshot.events[0].sessionId, shared.sessionId);
+});
+test('initial identity rotation retains its session start and latest 499 events at queue capacity', () => {
+    const { queue } = fixture({
+        waitForIdentity: true,
+        restored: { identity: 'old-account', events: [] },
+        readSession: () => ({
+            sessionId: 'old_session_1234',
+            lastActiveAt: Date.parse('2026-10-07T10:00:00Z'),
+        }),
+    });
+    for (let index = 0; index < 500; index++)
+        queue.track('search', { scope: 'pyq', queryLength: index });
+    const newestId = queue.snapshot.events.at(-1).eventId;
+    queue.identify('new-account');
+    assert.equal(queue.snapshot.events.length, 500);
+    assert.equal(queue.snapshot.events[0].name, 'session_start');
+    assert.equal(queue.snapshot.events[1].props.queryLength, 1);
+    assert.equal(queue.snapshot.events.at(-1).eventId, newestId);
 });
