@@ -225,6 +225,7 @@ export class AnalyticsQueue {
     private events: AnalyticsEvent[] = [];
     private identity: string | null;
     private sessionId: string;
+    private identifiedSessionId: string;
     private route?: string;
     private routeKey?: string;
     private college?: string;
@@ -243,6 +244,7 @@ export class AnalyticsQueue {
     private restoredIds = new Set<string>();
     private retiredSessions = new Set<string>();
     private paused = false;
+    private identityChangeSequence = 0;
     private identityReady: boolean;
     private now: () => number;
     private id: () => string;
@@ -259,6 +261,7 @@ export class AnalyticsQueue {
             savedSession.lastActiveAt <= this.now() &&
             this.now() - savedSession.lastActiveAt < 1800000;
         this.sessionId = reusable ? savedSession.sessionId : this.id();
+        this.identifiedSessionId = this.sessionId;
         this.lastActiveAt = this.now();
         this.saveSession();
         this.enteredAt = this.now();
@@ -568,27 +571,33 @@ export class AnalyticsQueue {
         }
     }
     async prepareIdentityChange(): Promise<void> {
+        const sequence = ++this.identityChangeSequence;
+        const current = () => sequence === this.identityChangeSequence;
         this.heartbeat();
         this.paused = true;
         let expired = false;
         let timeout: ReturnType<typeof setTimeout> | undefined;
         const drain = async () => {
             if (this.flight) await this.flight;
-            if (!expired) await this.flush(true);
+            if (!expired && current()) await this.flush(true);
         };
         await Promise.race([
             drain(),
             new Promise<void>((resolve) => {
                 timeout = setTimeout(() => {
                     expired = true;
-                    this.flightController?.abort();
-                    this.flightController = null;
-                    this.flight = null;
+                    if (current()) {
+                        this.flightController?.abort();
+                        this.flightController = null;
+                        this.flight = null;
+                    }
                     resolve();
                 }, 1500);
             }),
         ]);
         clearTimeout(timeout);
+        // A newer identity or preparation owns its queue and transport now.
+        if (!current()) return;
         // Old-cookie requests are aborted before auth changes; their callbacks cannot retry.
         this.events = [];
         this.failures = 0;
@@ -597,6 +606,7 @@ export class AnalyticsQueue {
         void this.flushPersistence();
     }
     identify(identity: string | null, sharedChange = false): void {
+        this.identityChangeSequence++;
         if (!this.identityReady) {
             const changed = identity !== this.identity;
             if (changed)
@@ -611,7 +621,7 @@ export class AnalyticsQueue {
                 const shared = sharedChange ? this.sharedSession() : undefined;
                 if (
                     shared &&
-                    shared.sessionId !== this.sessionId &&
+                    shared.sessionId !== this.identifiedSessionId &&
                     token.test(shared.sessionId) &&
                     this.now() - shared.lastActiveAt < 1800000
                 ) {
@@ -642,6 +652,7 @@ export class AnalyticsQueue {
                     sessionId: this.sessionId,
                 }));
             }
+            this.identifiedSessionId = this.sessionId;
             this.persist();
             return;
         }
@@ -659,7 +670,7 @@ export class AnalyticsQueue {
             const shared = sharedChange ? this.sharedSession() : undefined;
             if (
                 shared &&
-                (!changed || shared.sessionId !== this.sessionId) &&
+                (!changed || shared.sessionId !== this.identifiedSessionId) &&
                 token.test(shared.sessionId) &&
                 this.now() - shared.lastActiveAt < 1800000
             ) {
@@ -667,12 +678,14 @@ export class AnalyticsQueue {
                 this.lastActiveAt = shared.lastActiveAt;
             } else this.rotate();
         }
+        this.identifiedSessionId = this.sessionId;
         this.persist();
     }
     reset(): void {
         this.identify(null);
     }
     cancelIdentityChange(): void {
+        this.identityChangeSequence++;
         this.paused = false;
         this.activeSince = this.hiddenAt === null ? this.now() : null;
     }

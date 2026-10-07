@@ -698,6 +698,108 @@ test('identity flush has one 1.5 second deadline, aborts transport and cannot re
     assert.equal(calls, 1);
     assert.equal(queue.snapshot.events[0].name, 'session_start');
 });
+test('an obsolete identity drain cannot flush or clear a newer identity queue', async () => {
+    let calls = 0;
+    const { queue } = fixture({
+        send: async (_batch, signal) => {
+            calls++;
+            return new Promise((_resolve, reject) => {
+                signal.addEventListener('abort', () =>
+                    reject(new Error('aborted')),
+                );
+            });
+        },
+    });
+    queue.identify('old-account');
+    queue.screen('/[slug]/notes', 'real-college');
+    const flight = queue.flush();
+    const changing = queue.prepareIdentityChange();
+    queue.identify('new-account', true);
+    queue.track('content_view', { type: 'note', id: contentId });
+    const nextEvents = queue.snapshot.events;
+    await changing;
+    await flight;
+    assert.equal(calls, 1);
+    assert.deepEqual(queue.snapshot.events, nextEvents);
+    assert.deepEqual(
+        nextEvents.map((event) => event.name),
+        ['session_start', 'screen_view', 'content_view'],
+    );
+});
+test('an obsolete identity deadline cannot abort or discard a newer transport', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    const requests = [];
+    const { queue } = fixture({
+        send: async (_batch, signal) =>
+            new Promise((finish) => {
+                requests.push({ signal, finish });
+            }),
+    });
+    queue.identify('old-account');
+    const changing = queue.prepareIdentityChange();
+    queue.identify('new-account', true);
+    queue.track('content_view', { type: 'note', id: contentId });
+    const nextEvents = queue.snapshot.events;
+    const nextFlight = queue.flush();
+    assert.equal(requests.length, 2);
+    assert.equal(requests[0].signal.aborted, true);
+    t.mock.timers.tick(1500);
+    await changing;
+    assert.equal(requests[1].signal.aborted, false);
+    assert.deepEqual(queue.snapshot.events, nextEvents);
+    assert.equal(queue.flush(), nextFlight);
+    requests[0].finish({ status: 503 });
+    requests[1].finish({ status: 204 });
+    await nextFlight;
+    assert.equal(queue.snapshot.events.length, 0);
+});
+test('a newer identity preparation retains ownership of the shared drain deadline', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    let signal;
+    const { queue } = fixture({
+        send: async (_batch, input) => {
+            signal = input;
+            return new Promise((_resolve, reject) => {
+                input.addEventListener('abort', () =>
+                    reject(new Error('aborted')),
+                );
+            });
+        },
+    });
+    const first = queue.prepareIdentityChange();
+    t.mock.timers.tick(500);
+    const second = queue.prepareIdentityChange();
+    t.mock.timers.tick(1000);
+    await first;
+    assert.equal(signal.aborted, false);
+    assert.ok(queue.snapshot.events.length > 0);
+    t.mock.timers.tick(500);
+    await second;
+    assert.equal(signal.aborted, true);
+    assert.equal(queue.snapshot.events.length, 0);
+});
+test('cancelling a pending identity preparation preserves subsequently recorded events', async () => {
+    let finish,
+        calls = 0;
+    const { queue } = fixture({
+        send: async () => {
+            calls++;
+            return new Promise((resolve) => {
+                finish = resolve;
+            });
+        },
+    });
+    const changing = queue.prepareIdentityChange();
+    queue.cancelIdentityChange();
+    queue.track('content_view', { type: 'note', id: contentId });
+    finish({ status: 204 });
+    await changing;
+    assert.equal(calls, 1);
+    assert.deepEqual(
+        queue.snapshot.events.map((event) => event.name),
+        ['content_view'],
+    );
+});
 test('fetch transport is safelisted and obeys the identity abort signal', async () => {
     const original = global.fetch;
     let request;
@@ -951,7 +1053,7 @@ test('every local session rotation restores the current screen without a duplica
         ['session_start', 'screen_view'],
     );
 });
-test('collecting dead tabs removes orphan leases without skipping adjacent keys or live queues', () => {
+test('collecting dead tabs removes only expired orphan leases without skipping live tabs', () => {
     const storage = memoryStorage();
     storage.setItem('queue:lease:orphan01', '2000');
     storage.setItem('queue:lease:orphan02', '0');
@@ -961,7 +1063,7 @@ test('collecting dead tabs removes orphan leases without skipping adjacent keys 
         JSON.stringify({ identity: null, events: [] }),
     );
     const tab = tabStorage(storage, 'queue', null, () => 1000, 'newtab01');
-    assert.equal(storage.getItem('queue:lease:orphan01'), null);
+    assert.equal(storage.getItem('queue:lease:orphan01'), '2000');
     assert.equal(storage.getItem('queue:lease:orphan02'), null);
     assert.equal(storage.getItem('queue:lease:live0001'), '2000');
     assert.ok(storage.getItem(tab.key));
@@ -985,4 +1087,48 @@ test('product search settles at 1.5 seconds; intermediate 500ms typing pauses ca
     t.mock.timers.tick(1);
     assert.deepEqual(events, [{ queryLength: 5, resultCount: 137 }]);
     assert.equal(tracker.settle('books', 20), null);
+});
+
+for (const firstIdentityReady of [false, true])
+    test(`logout storage event adopts a session already observed by activity (identity ready: ${firstIdentityReady})`, () => {
+        let shared,
+            counter = 0;
+        const options = {
+            waitForIdentity: !firstIdentityReady,
+            restored: { identity: 'account', events: [] },
+            readSession: () => shared,
+            writeSession: (value) => {
+                shared = value;
+            },
+            id: () => String(++counter).padStart(32, '0'),
+        };
+        const owner = fixture(options).queue;
+        const follower = fixture(options).queue;
+        if (firstIdentityReady) {
+            owner.identify('account');
+            follower.identify('account');
+        }
+        owner.reset();
+        const logoutSession = owner.session;
+        follower.activity();
+        assert.equal(follower.session, logoutSession);
+        follower.identify(null, true);
+        assert.equal(follower.session, logoutSession);
+        assert.equal(shared.sessionId, logoutSession);
+        assert.equal(
+            follower.snapshot.events.filter(
+                (event) => event.name === 'session_start',
+            ).length,
+            0,
+        );
+    });
+test('a live orphan lease from a back-forward cached page survives collection until it expires', () => {
+    const storage = memoryStorage();
+    let now = 1000;
+    storage.setItem('queue:lease:bfcache1', '2000');
+    tabStorage(storage, 'queue', null, () => now, 'newpage1');
+    assert.equal(storage.getItem('queue:lease:bfcache1'), '2000');
+    now = 2000;
+    tabStorage(storage, 'queue', null, () => now, 'newpage2');
+    assert.equal(storage.getItem('queue:lease:bfcache1'), null);
 });

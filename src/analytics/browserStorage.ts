@@ -51,6 +51,7 @@ export function tabStorage(
                 const owner = candidate.slice(`${prefix}:lease:`.length);
                 if (
                     validId.test(owner) &&
+                    Number(read(candidate)) <= now() &&
                     !storage?.getItem(`${prefix}:${owner}`)
                 )
                     orphans.push(candidate);
