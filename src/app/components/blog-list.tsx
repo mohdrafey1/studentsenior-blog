@@ -1,5 +1,7 @@
 'use client';
 import React from 'react';
+import { analytics } from '@/analytics';
+import { shareAndTrack } from '@/analytics/share';
 import { useRouter } from 'next/navigation';
 import { BlogPost } from '@/constant/interface';
 import BlogPostCard from './blog-post-card';
@@ -17,17 +19,41 @@ export default function BlogPostList({
         router.push(`/${slug}`);
     };
 
-    const handleShare = (post: BlogPost) => {
+    const handleShare = async (post: BlogPost) => {
         const postUrl = `${window.location.origin}/${post.slug}`;
-        navigator.clipboard.writeText(postUrl);
-        if (navigator.share) {
-            navigator.share({
-                title: post.title,
-                text: post.description,
-                url: postUrl,
-            });
-        } else {
-            alert('Link copied to clipboard!');
+        try {
+            if (navigator.share) {
+                // Keep the native share invocation synchronous with the click gesture.
+                // Clipboard failure must not suppress the native share sheet.
+                void navigator.clipboard
+                    ?.writeText(postUrl)
+                    .catch(() => undefined);
+                await shareAndTrack(
+                    () =>
+                        navigator.share({
+                            title: post.title,
+                            text: post.description,
+                            url: postUrl,
+                        }),
+                    () =>
+                        analytics.track('share', {
+                            type: 'blog',
+                            id: post._id,
+                        }),
+                );
+            } else {
+                await shareAndTrack(
+                    () => navigator.clipboard.writeText(postUrl),
+                    () =>
+                        analytics.track('share', {
+                            type: 'blog',
+                            id: post._id,
+                        }),
+                );
+                alert('Link copied to clipboard!');
+            }
+        } catch {
+            /* A cancelled or failed share emits nothing. */
         }
     };
 

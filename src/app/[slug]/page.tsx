@@ -1,3 +1,4 @@
+import TrackContentView from '@/analytics/TrackContentView';
 import { ArrowLeft, Calendar, User, Clock } from 'lucide-react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -22,6 +23,7 @@ import { formatReadTime, formatDate } from '@/utils/formatting';
 import ClientAd from '@/app/components/Ads/AdsClient';
 import { optimizeCloudinaryUrl } from '@/utils/cloudinary';
 import CopyButton from '@/app/components/copy-button';
+import ImageLightbox from '@/app/components/ImageLightbox/ImageLightbox';
 import type { Element, ElementContent } from 'hast';
 import AiSummary from '../components/AiSummary/AiSummary';
 import ViewTracker from '@/app/components/view-tracker';
@@ -178,16 +180,15 @@ function BlogPostComponent({
 
                             return (
                                 <div className='my-6 md:my-8 rounded-xl overflow-hidden shadow-lg border border-neutral-200 group'>
-                                    <Image
+                                    <ImageLightbox
                                         src={optimizeCloudinaryUrl(
-                                            src || '',
-                                            'f_auto,q_auto,c_fill,w_400,dpr_auto'
+                                            src,
+                                            'f_auto,q_auto,c_fill,w_800,dpr_auto'
                                         )}
                                         alt={alt || ''}
                                         width={800}
                                         height={400}
-                                        className='w-full h-auto object-cover transition-transform duration-500 group-hover:scale-[1.02]'
-                                        unoptimized
+                                        sizes='(max-width: 640px) 100vw, (max-width: 1024px) 75vw, 800px'
                                     />
                                     {alt && (
                                         <div className='bg-neutral-50 px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm text-neutral-600 text-center border-t border-neutral-200'>
@@ -300,7 +301,7 @@ function BlogPostComponent({
 
                                 {/* Share Buttons */}
                                 <div className='flex justify-start sm:justify-end'>
-                                    <SocialShareButtons />
+                                    <SocialShareButtons id={post._id} />
                                 </div>
                             </div>
 
@@ -375,11 +376,12 @@ export async function generateMetadata({ params }: { params: tParams }) {
     const blogId = slug;
 
     try {
-        const postRes = await fetch(`${api.blog.allBlogs}/${blogId}`, {
+        const postRes = await fetch(api.blog.bySlug(blogId), {
             next: { revalidate: 3600 },
             headers: { 'Content-Type': 'application/json' },
         });
 
+        if (postRes.status >= 500) throw new Error('Blog content is temporarily unavailable');
         if (!postRes.ok) {
             return {
                 title: 'Blog Post Not Found',
@@ -451,37 +453,34 @@ export default async function BlogPostPage({
     try {
         // Fetch all data in parallel
         const [postRes, popularRes, latestRes] = await Promise.all([
-            fetch(`${api.blog.allBlogs}/${blogId}`, {
+            fetch(api.blog.bySlug(blogId), {
                 next: { revalidate: 3600 },
                 headers,
             }),
-            fetch(api.blog.popularBlogs, {
+            fetch(api.blog.popular, {
                 next: { revalidate: 3600 },
                 headers,
             }),
-            fetch(api.blog.latestBlogs, {
+            fetch(api.blog.latest, {
                 next: { revalidate: 3600 },
                 headers,
             }),
         ]);
 
-        if (!postRes.ok) {
-            console.error(`Failed to fetch post: ${postRes.status}`);
-            return notFound();
-        }
+        if (postRes.status === 404) return notFound();
+        if (!postRes.ok) throw new Error('Blog post is temporarily unavailable');
 
         const postJson = await postRes.json();
-        if (!postJson?.data) {
-            console.error('Post data not found in response');
-            return notFound();
-        }
+        if (postJson.success !== true || !postJson.data) throw new Error('Unexpected blog response');
 
-        // Safely parse other JSONs
+        if (!popularRes.ok || !latestRes.ok) throw new Error('Related blog content is temporarily unavailable');
+        // Parse validated HTTP responses.
         const [popularJson, latestJson] = await Promise.all([
             popularRes.ok ? popularRes.json() : { data: [] },
             latestRes.ok ? latestRes.json() : { data: [] },
         ]);
 
+        if (popularJson.success !== true || latestJson.success !== true || !Array.isArray(popularJson.data) || !Array.isArray(latestJson.data)) throw new Error('Unexpected blog response');
         return (
             <>
                 <BlogPostComponent
@@ -490,10 +489,10 @@ export default async function BlogPostPage({
                     latestPosts={latestJson.data || []}
                 />
                 <ViewTracker slug={slug} />
+                <TrackContentView type="blog" id={postJson.data._id} />
             </>
         );
     } catch (error) {
-        console.error('Error fetching blog post:', error);
-        return notFound();
+        throw error;
     }
 }

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { Sparkles, RefreshCw, ChevronRight } from 'lucide-react';
 
 interface AiSummaryProps {
     summaries: string[][];
@@ -19,14 +19,14 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
         setTyping(true);
         setAiTyping(true);
 
-        let index = 0;
-        const typingSpeed = 25;
+        let currentIndex = 0;
+        const typingSpeed = 20;
 
         const interval = setInterval(() => {
-            setDisplayText((prev) => prev + text.charAt(index - 1));
-            index++;
+            currentIndex++;
+            setDisplayText(text.slice(0, currentIndex));
 
-            if (index === text.length) {
+            if (currentIndex >= text.length) {
                 clearInterval(interval);
                 setTyping(false);
                 setTimeout(() => setAiTyping(false), 600);
@@ -36,7 +36,7 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
 
     // Generate summary
     const handleGenerate = () => {
-        if (!summaries.length) return;
+        if (!summaries.length || loading || typing) return;
 
         setStarted(true);
         setLoading(true);
@@ -48,11 +48,7 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
 
         setTimeout(() => {
             const randomIndex = Math.floor(Math.random() * summaries.length);
-
-            // FIXED — summaries[randomIndex] is already an array of strings
             const selectedSummaryArray = summaries[randomIndex];
-
-            // Convert string[] → single string (with line breaks)
             const newSummary = selectedSummaryArray.join('\n');
 
             setLoading(false);
@@ -61,38 +57,50 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
     };
 
     return (
-        <div className='relative mx-3 sm:mx-6 md:mx-10 my-4 rounded-2xl bg-blue-100'>
-            <div className='rounded-t-2xl p-4 sm:p-5 md:p-6'>
-                <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-3'>
-                    <div className='flex items-center gap-1'>
-                        <Sparkles className='w-5 h-5 text-blue-600 pl-4 pr-4' />
-                        <h3 className='text-[17px] sm:text-[18px] font-semibold text-gray-800 tracking-tight'>
-                            AI Summary
-                        </h3>
+        <div className='relative mx-3 sm:mx-6 md:mx-10 my-8 overflow-hidden rounded-3xl bg-white dark:bg-gray-900 border border-indigo-100/60 dark:border-gray-800 shadow-xl shadow-indigo-500/5 dark:shadow-none transition-all duration-300'>
+            {/* Subtle Gradient Background */}
+            <div className='absolute inset-0 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/50 dark:from-indigo-950/20 dark:via-gray-900 dark:to-purple-900/10 pointer-events-none' />
+            
+            <div className='relative z-10 p-5 sm:p-7 md:p-8'>
+                <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4 border-b border-indigo-100/60 dark:border-gray-800 pb-5'>
+                    <div className='flex items-center gap-3 cursor-pointer group' >
+                        <div className='p-2.5 bg-indigo-100 dark:bg-indigo-900/50 rounded-xl group-hover:scale-105 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-800/50 transition-all shadow-sm'>
+                            <Sparkles className='w-5 h-5 text-indigo-600 dark:text-indigo-400' />
+                        </div>
+                        <div>
+                            <h3 className='text-[18px] sm:text-[20px] font-bold text-gray-900 dark:text-gray-100 tracking-tight'>
+                                AI Summary
+                            </h3>
+                            <p className='text-xs text-gray-500 dark:text-gray-400 font-medium mt-0.5'>
+                                Get a quick overview of the key points
+                            </p>
+                        </div>
                     </div>
 
                     {!started && (
                         <button
                             onClick={handleGenerate}
                             disabled={loading || typing}
-                            className='text-sm font-medium bg-blue-600 hover:bg-blue-700 transition-all text-white flex items-center gap-2 px-4 py-1.5 rounded-md shadow disabled:opacity-50 w-full sm:w-auto justify-center'
+                            className='group relative inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-semibold text-white transition-all duration-300 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl hover:from-indigo-500 hover:to-purple-500 shadow-md hover:shadow-indigo-500/25 disabled:opacity-70 disabled:cursor-not-allowed overflow-hidden w-full sm:w-auto'
                         >
+                            <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black" />
                             {loading ? (
-                                <RefreshCw className='w-4 h-4 animate-spin' />
+                                <RefreshCw className='w-4 h-4 animate-spin relative z-10' />
                             ) : (
-                                <Sparkles className='w-4 h-4' />
+                                <Sparkles className='w-4 h-4 relative z-10 group-hover:scale-110 transition-transform' />
                             )}
-                            Generate
+                            <span className="relative z-10 tracking-wide">Generate Magic</span>
                         </button>
                     )}
 
                     {loading && (
-                        <div className='-mt-3'>
+                        <div className='-mt-1 flex items-center justify-center'>
                             <svg
-                                width='40'
-                                height='40'
+                                width='44'
+                                height='44'
                                 viewBox='0 0 80 80'
                                 xmlns='http://www.w3.org/2000/svg'
+                                className='drop-shadow-sm'
                             >
                                 <defs>
                                     <linearGradient
@@ -102,18 +110,9 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
                                         x2='100%'
                                         y2='100%'
                                     >
-                                        <stop
-                                            offset='0%'
-                                            stop-color='#8B5CF6'
-                                        />
-                                        <stop
-                                            offset='50%'
-                                            stop-color='#A855F7'
-                                        />
-                                        <stop
-                                            offset='100%'
-                                            stop-color='#FB7185'
-                                        />
+                                        <stop offset='0%' stopColor='#6366f1' />
+                                        <stop offset='50%' stopColor='#a855f7' />
+                                        <stop offset='100%' stopColor='#ec4899' />
                                     </linearGradient>
                                 </defs>
 
@@ -131,7 +130,6 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
                                         />
                                     </path>
                                 </g>
-
                                 <g transform='translate(10 10) scale(0.7)'>
                                     <path
                                         fill='url(#spark)'
@@ -146,7 +144,6 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
                                         />
                                     </path>
                                 </g>
-
                                 <g transform='translate(55 12) scale(0.55)'>
                                     <path
                                         fill='url(#spark)'
@@ -167,33 +164,43 @@ const AiSummary: React.FC<AiSummaryProps> = ({ summaries = [] }) => {
                 </div>
 
                 {/* Summary List */}
-                {displayText ? (
-                    <ul className='space-y-3 text-[14px] sm:text-[15px] text-gray-700'>
-                        {displayText.split('\n').map((line, i) => (
-                            <li
-                                key={i}
-                                className='flex items-start gap-2 sm:gap-3 border-l-0 border-purple-300 pl-2 sm:pl-3 py-0.5'
-                            >
-                                <span className='block h-2 w-2 mt-1 rounded-full bg-purple-500'></span>
-                                <span className='leading-relaxed break-words'>
-                                    {line}
-                                    {aiTyping &&
-                                        i ===
-                                            displayText.split('\n').length -
-                                                1 && (
-                                            <span className='ml-1 animate-pulse text-purple-600'>
-                                                █
-                                            </span>
-                                        )}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className='text-gray-400 text-sm sm:text-[15px]'>
-                        Tap Generate and let AI do the magic
-                    </p>
-                )}
+                <div className="min-h-[100px] flex items-center justify-center">
+                    {displayText ? (
+                        <ul className='space-y-4 w-full'>
+                            {displayText.split('\n').map((line, i) => {
+                                if (!line.trim()) return null;
+                                return (
+                                    <li
+                                        key={i}
+                                        className='flex items-start gap-3.5 group'
+                                    >
+                                        <div className='mt-1 flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 shadow-sm'>
+                                            <ChevronRight className='w-3.5 h-3.5' />
+                                        </div>
+                                        <span className='text-[15px] sm:text-[16px] leading-relaxed text-gray-700 dark:text-gray-300 break-words'>
+                                            {line}
+                                            {aiTyping &&
+                                                i ===
+                                                    displayText.split('\n').filter(l => l.trim()).length -
+                                                        1 && (
+                                                    <span className='ml-1.5 inline-block w-1.5 h-4 bg-indigo-500 animate-pulse align-middle rounded-sm'></span>
+                                                )}
+                                        </span>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    ) : (
+                        !loading && (
+                            <div className='flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-indigo-100 dark:border-gray-800 rounded-2xl w-full bg-white/50 dark:bg-gray-900/50'>
+                                <Sparkles className='w-8 h-8 text-indigo-300 dark:text-indigo-900/80 mb-3' />
+                                <p className='text-gray-500 dark:text-gray-400 text-[15px] font-medium'>
+                                    Tap <span className='text-indigo-600 dark:text-indigo-400 font-semibold'>Generate Magic</span> to let AI read for you.
+                                </p>
+                            </div>
+                        )
+                    )}
+                </div>
             </div>
         </div>
     );

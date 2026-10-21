@@ -24,7 +24,10 @@ export interface BlogPostComponentProps {
     latestPosts: Blog[];
 }
 
-export type tParams = Promise<{ slug: string[] }>;
+// The route is app/[slug], a single dynamic segment, so Next resolves this
+// to a string. It was typed string[] and only worked because every use site
+// interpolated it into a template literal.
+export type tParams = Promise<{ slug: string }>;
 
 export interface CodeProps extends React.HTMLAttributes<HTMLElement> {
     inline?: boolean;

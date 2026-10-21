@@ -1,4 +1,5 @@
 'use client';
+import { analytics } from '@/analytics';
 
 import { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -9,7 +10,7 @@ import {
 } from '@fortawesome/free-brands-svg-icons';
 import { SocialShareButtonsProps } from '@/constant/interface';
 
-const SocialShareButtons = ({ message }: SocialShareButtonsProps) => {
+const SocialShareButtons = ({ message, id }: SocialShareButtonsProps & { id?: string }) => {
     const [currentUrl, setCurrentUrl] = useState('');
 
     useEffect(() => {
@@ -26,10 +27,12 @@ const SocialShareButtons = ({ message }: SocialShareButtonsProps) => {
     const encodedUrlOnly = encodeURIComponent(currentUrl);
 
     const handleWhatsAppShare = () => {
+        analytics.track('share', { type: 'blog', id });
         window.open(`https://wa.me/?text=${finalMessage}`, '_blank');
     };
 
     const handleTwitterShare = () => {
+        analytics.track('share', { type: 'blog', id });
         window.open(
             `https://twitter.com/intent/tweet?text=${finalMessage}`,
             '_blank'
@@ -37,6 +40,7 @@ const SocialShareButtons = ({ message }: SocialShareButtonsProps) => {
     };
 
     const handleLinkedInShare = () => {
+        analytics.track('share', { type: 'blog', id });
         window.open(
             `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrlOnly}`,
             '_blank'
